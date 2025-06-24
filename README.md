@@ -30,6 +30,8 @@ Vellum uses a technique called [XPBD (Extended Position-Based Dynamics)](https:/
 
 For example, cloth is bendy but stiff in terms of edge lengths. This behaviour can be simulated with distance constraints. Distance constraints try to preserve their rest length based on stiffness. When you stretch or squash a distance constraint, it pulls the points towards the middle until they reach their rest length again. Since shortening one constraint makes others longer and vice versa, it's an iterative process. It propagates over several iterations until everything converges to the target length.
 
+<img src="./images/edging.png" width="700">
+
 VBD constraints are similar, but they're defined in terms of energy instead. They also run over each point rather than each constraint, meaning less workgroups (colors) overall. The Graph Color node allows workgroups for points as well as prims, so it works both for VBD and XPBD.
 
 Here's a quick comparison between VBD and XPBD:
