@@ -6,7 +6,7 @@ I made an OpenCL version for performance, and a VEX version for debugging. Both 
 
 Currently I've implemented everything from [TinyVBD](https://github.com/AnkaChan/TinyVBD), which isn't much.
 
-I'll work on this when I can, but feel free to [contribute](https://github.com/MysteryPancake/Houdini-VBD/pulls) to speed up progress!
+I'll work on this when I can, but feel free to contribute to speed up progress!
 
 ## Todo
 - [x] Steal from [TinyVBD](https://github.com/AnkaChan/TinyVBD)
