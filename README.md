@@ -20,6 +20,7 @@ I'll work on this now and then, but feel free to [contribute](https://github.com
   - [ ] [LDLT decomposition](https://graphics.cs.utah.edu/research/projects/avbd/Augmented_VBD-SIGGRAPH25.pdf) to improve stability
   - [ ] [Hard constraints](https://graphics.cs.utah.edu/research/projects/avbd/Augmented_VBD-SIGGRAPH25.pdf)
   - [ ] All other improvements
+- [ ] Touch grass
 
 ## What's VBD?
 
