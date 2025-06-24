@@ -46,7 +46,7 @@ The most important part of VBD is the energy definition, but no one seems to agr
 
 I've seen many different energy definitions, including mass-spring energy (used by [TinyVBD](https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_MassSpring.cpp) and [AVBD](https://github.com/savant117/avbd-demo2d/blob/main/source/spring.cpp#L40), but [removed from full VBD](https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_MassSpring.cpp)), StVK (can't find this anywhere, maybe the same as mass-spring) and Neo-Hookean (used by [full VBD](https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_NeoHookean.cpp)).
 
-I'm guessing Neo-Hookean energy is best since it was the most used in the paper, but I haven't tried it myself yet.
+I'm guessing Neo-Hookean energy is best since it was the most used in the paper, but haven't tried it yet.
 
 ## Why does it explode randomly?
 Great question! This is a problem with VBD in general.
