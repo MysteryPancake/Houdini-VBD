@@ -1,6 +1,8 @@
 # Houdini Vertex Block Descent
 
-WIP of Vertex Block Descent in Houdini. I made an OpenCL version for performance, and a VEX version for debugging.
+WIP of Vertex Block Descent in Houdini. It runs natively without any plugins, as god intended.
+
+I made an OpenCL version for performance, and a VEX version for debugging. Both are included in the HIP files.
 
 Currently it includes everything in [TinyVBD](https://github.com/AnkaChan/TinyVBD), which isn't much.
 
