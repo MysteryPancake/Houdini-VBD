@@ -26,7 +26,7 @@ I'll work on this now and then, but feel free to [contribute](https://github.com
 
 Vertex Block Descent is quite similar to Vellum. It's basically Vellum 2.
 
-Vellum uses a technique called [XPBD (Extended Position-Based Dynamics)](https://matthias-research.github.io/pages/publications/XPBD.pdf). XPBD uses constraints to simulate soft body behaviour. Constraints are solved in parallel workgroups (colors) in OpenCL for better performance.
+Vellum uses a technique called [XPBD (Extended Position-Based Dynamics)](https://matthias-research.github.io/pages/publications/XPBD.pdf). XPBD uses constraints to simulate soft body behaviour. Constraints are solved in parallel workgroups (colors) in OpenCL for better performance. Colors are groups of constraints that aren't directly connected.
 
 For example, cloth is bendy but stiff in terms of edge lengths. This behaviour can be simulated with distance constraints. Distance constraints try to preserve their rest length based on stiffness. When you stretch or squash a distance constraint, it pulls the points towards the middle until they reach their rest length again. Since shortening one constraint makes others longer and vice versa, it's an iterative process. It propagates over several iterations until everything converges to the target length.
 
@@ -36,7 +36,7 @@ Here's a quick comparison between VBD and XPBD:
 
 |  | VBD | Vellum (XPBD) | Advantage | Disadvantage |
 | --- | --- | --- | --- | --- |
-| **Runs over** | Points<br><img src="./images/color_points.png" height="200"> | Prims (each constraint)<br><img src="./images/color_prims.png" height="200"> | Fewer colors/workgroups, faster for parallel processing | Takes longer to propagate for stiff objects, since it updates 1 point per iteration instead of 2 (one on each side of the constraint) |
+| **Runs over** | <p align="center">Point colors<br><img src="./images/color_points.png" width="128" height="128"></p> | <p align="center">Colors per constraint<br><img src="./images/color_prims.png" width="128" height="128"></p> | Fewer colors/workgroups, faster for parallel processing | Takes longer to propagate for stiff objects, since it updates 1 point per iteration instead of 2 (one on each side of the constraint) |
 | **Constraints** | Energy based (eg mass-spring energy or Neo-Hookean energy) | XPBD based (eg distance constraints) | Better for larger mass ratios | Randomly explodes due to hessian matrix inversion |
 | **Iterations** | Gauss-Seidel | Gauss-Seidel (for constraint iterations) and Jacobi (for smoothing iterations) | Reaches a global solution faster | Might be less stable |
 
