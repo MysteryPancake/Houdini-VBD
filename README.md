@@ -4,7 +4,7 @@ WIP of Vertex Block Descent in Houdini. I made an OpenCL version for performance
 
 Currently it includes everything in [TinyVBD](https://github.com/AnkaChan/TinyVBD), which isn't much.
 
-I'll work on this when I have time, but feel free to [contribute](https://github.com/MysteryPancake/Houdini-VBD/pulls) to speed up progress!
+I'll work on this now and then, but feel free to [contribute](https://github.com/MysteryPancake/Houdini-VBD/pulls) to speed up progress!
 
 ## Todo
 - [x] Steal from [TinyVBD](https://github.com/AnkaChan/TinyVBD)
@@ -21,9 +21,15 @@ I'll work on this when I have time, but feel free to [contribute](https://github
 
 ## What's VBD?
 
-Vertex Block Descent is pretty similar to Vellum. It's basically Vellum 2.
+Vertex Block Descent is quite similar to Vellum. It's basically Vellum 2.
 
-Vellum uses a technique called XPBD (Extended Position Based Dynamics). Here's a few differences:
+Vellum uses a technique called [XPBD (Extended Position-Based Dynamics)](https://matthias-research.github.io/pages/publications/XPBD.pdf). XPBD uses constraints to simulate soft body behaviour. Constraints are solved in parallel workgroups (colors) in OpenCL for better performance.
+
+For example, cloth is bendy but stiff in terms of edge lengths. This behaviour can be simulated with distance constraints. Distance constraints try to preserve their rest length based on stiffness. When you stretch or squash a distance constraint, it pulls the points towards the middle until they reach their rest length again. Since shortening one constraint makes others longer and vice versa, it's an iterative process. It propagates over several iterations until everything converges to the target length.
+
+VBD constraints are similar, but they're defined in terms of energy instead. They also run over each point rather than each constraint, meaning less workgroups (colors) overall. The Graph Color node allows workgroups for points as well as prims, so it works both for VBD and XPBD.
+
+Here's a quick comparison between VBD and XPBD:
 
 |  | VBD | Vellum (XPBD) | Advantage | Disadvantage |
 | --- | --- | --- | --- | --- |
@@ -31,8 +37,14 @@ Vellum uses a technique called XPBD (Extended Position Based Dynamics). Here's a
 | **Constraints** | Energy based (eg mass-spring energy or Neo-Hookean energy) | XPBD based (eg distance constraints) | Better for larger mass ratios | Randomly explodes due to hessian matrix inversion |
 | **Iterations** | Gauss-Seidel | Gauss-Seidel (for constraint iterations) and Jacobi (for smoothing iterations) | Reaches a global solution faster | Might be less stable |
 
+The most important part of VBD is the energy definition, but no one seems to agree on this.
+
+I've seen many different energy definitions, including mass-spring energy (used by [TinyVBD](https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_MassSpring.cpp) and [AVBD](https://github.com/savant117/avbd-demo2d/blob/main/source/spring.cpp#L40), but [removed from full VBD](https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_MassSpring.cpp)), StVK (can't find this anywhere, maybe the same as mass-spring) and [Neo-Hookean](https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_NeoHookean.cpp) (used by full VBD).
+
+I'm guessing Neo-Hookean energy is best since it was the most used in the paper, but I haven't tried it myself yet.
+
 ## Why does it explode randomly?
-This is a problem with VBD in general.
+Great question! This is a problem with VBD in general.
 
 The core idea of VBD is updating the position based on a force vector and a hessian matrix:
 ```c
@@ -47,19 +59,19 @@ if (abs(determinant(hessian)) > 1e-7) {
 }
 ```
 
-This helps, but it explodes when the values gets too large as well.
+This helps, but it also explodes when the values gets too large (for example with very stiff constraints).
 
 [AVBD](https://graphics.cs.utah.edu/research/projects/avbd/Augmented_VBD-SIGGRAPH25.pdf) uses an approximation to make the hessian symmetric positive definite (SPD) to allow LDLT decomposition instead.
 
-It also explodes because [TinyVBD](https://github.com/AnkaChan/TinyVBD) implements [mass-spring energy](https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_MassSpring.cpp) instead of [Neo-Hookean](https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_NeoHookean.cpp) energy. They [removed mass-spring energy](https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_MassSpring.cpp) from full VBD, likely for this reason.
+It probably also explodes since [TinyVBD](https://github.com/AnkaChan/TinyVBD) implements [mass-spring energy](https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_MassSpring.cpp) instead of [Neo-Hookean](https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_NeoHookean.cpp) energy. They [removed mass-spring energy](https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_MassSpring.cpp) from full VBD, likely because it keeps exploding.
 
 ## AVBD Q&A
 
 There's a new paper called [Augmented Vertex Block Descent (AVBD)](https://graphics.cs.utah.edu/research/projects/avbd/Augmented_VBD-SIGGRAPH25.pdf). It adds many improvements to VBD.
 
-I asked the authors about a few differences. They responded with lots of useful information. Thanks guys!
+I asked the authors about some differences I noticed. They responded with lots of useful information. Thanks guys!
 
-### Missing accelerated convergence in AVBD
+### Missing accelerated convergence
 
 Hi Chris, In the original VBD paper and in TinyVBD, they used an acceleration method to improve convergence (Section 3.8). I noticed in AVBD there's no mention of this method. Was it causing too much instability? Thanks!
 
@@ -67,7 +79,7 @@ Hi Chris, In the original VBD paper and in TinyVBD, they used an acceleration me
 > Yeah we ended up not using the acceleration from VBD as it was in general kind of unstable and difficult to tune, even with the original VBD method. It would be interesting to explore other acceleration methods as future work though.
 > -Chris
 
-### Energy definition used for AVBD
+### Energy definition used
 
 Hi Chris, I was wondering what type energy you used for constraints? There were multiple used in the VBD paper, including mass spring, StVK, and Neo-Hookean. It looks like you used mass spring energy. Is this correct, or did you use Neo-Hookean? Thanks!
 
