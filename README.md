@@ -46,7 +46,7 @@ I'm guessing Neo-Hookean energy is best since it was the most used in the paper,
 ## Why does it explode randomly?
 Great question! This is a problem with VBD in general.
 
-The core idea of VBD is updating the position based on a force vector and a hessian matrix:
+The core of VBD is updating the position based on a force vector and a hessian matrix:
 ```c
 v@P += force * invert(hessian); // force and hessian depend on the energy definition, eg mass-spring or Neo-Hookean
 ```
