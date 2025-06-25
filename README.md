@@ -59,7 +59,7 @@ v@P += force * invert(hessian); // force and hessian depend on the energy defini
 `invert(hessian)` is very unstable, so everyone tries to bandaid it in various ways. The [VBD paper](https://graphics.cs.utah.edu/research/projects/vbd/vbd-siggraph2024.pdf) uses the determinant of the matrix:
 
 ```c
-if (abs(determinant(hessian)) > 1e-7) {
+if (abs(determinant(hessian)) > 1e-7) { // if |det(H𝑖)| > 𝜖 for some small threshold 𝜖
   v@P += force * invert(hessian);
 }
 ```
