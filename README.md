@@ -38,7 +38,7 @@ Here's a quick comparison between VBD and XPBD:
 
 |  | VBD | Vellum (XPBD) | Advantage | Disadvantage |
 | --- | --- | --- | --- | --- |
-| **Runs over** | <p align="center">Point colors<br><img src="./images/color_points.png"></p> | <p align="center">Colors per constraint<br><img src="./images/color_prims.png"></p> | Less colors/workgroups, better for parallel processing | Takes longer to converge for stiff objects, since it updates 1 point per iteration instead of 2 (one on each side of the constraint) |
+| **Runs over** | <p align="center">Point colors<br><img src="./images/color_points.png"></p> | <p align="center">Colors per constraint<br><img src="./images/color_prims.png"></p> | Less colors/workgroups, better for parallel processing | Takes longer to converge for stiff objects, partly because it updates 1 point per iteration instead of 2 (one on each side of the constraint) |
 | **Constraints** | Energy based (eg mass-spring energy or Neo-Hookean energy) | XPBD based (eg distance constraints) | Better for larger mass ratios | Randomly explodes due to hessian matrix inversion |
 | **Iterations** | Gauss-Seidel | Gauss-Seidel (for constraint iterations) and Jacobi (for smoothing iterations) | Reaches a global solution faster | Might be less stable |
 
