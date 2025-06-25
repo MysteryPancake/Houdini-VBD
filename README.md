@@ -14,6 +14,7 @@ I'll work on this when I can, but feel free to contribute to speed up progress!
   - [x] [Accelerated convergence method](https://graphics.cs.utah.edu/research/projects/vbd/vbd-siggraph2024.pdf)
 - [ ] Steal from [full VBD](https://github.com/AnkaChan/Gaia)
   - [ ] [Neo-Hookean energy definition](https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_NeoHookean.cpp), likely more stable
+  - [ ] Damping
   - [ ] Self collisions
   - [ ] External collisions
 - [ ] Steal from [AVBD](https://graphics.cs.utah.edu/research/projects/avbd/)
