@@ -56,7 +56,7 @@ The core of VBD is updating the position based on a force vector and a hessian m
 v@P += force * invert(hessian); // force and hessian depend on the energy definition, eg mass-spring or Neo-Hookean
 ```
 
-`invert(hessian)` is very unstable, so everyone tries to bandaid it in various ways. The VBD paper uses the determinant of the matrix:
+`invert(hessian)` is very unstable, so everyone tries to bandaid it in various ways. The [VBD paper](https://graphics.cs.utah.edu/research/projects/vbd/vbd-siggraph2024.pdf) uses the determinant of the matrix:
 
 ```c
 if (abs(determinant(hessian)) > 1e-7) {
