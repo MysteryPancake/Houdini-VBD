@@ -17,6 +17,7 @@ I'll work on this when I can, but feel free to contribute to speed up progress!
   - [ ] Damping
   - [ ] Self collisions
   - [ ] External collisions
+  - [ ] Friction
 - [ ] Steal from [AVBD](https://graphics.cs.utah.edu/research/projects/avbd/)
   - [ ] [LDLT decomposition](https://graphics.cs.utah.edu/research/projects/avbd/Augmented_VBD-SIGGRAPH25.pdf) to improve stability
   - [ ] [Hard constraints](https://graphics.cs.utah.edu/research/projects/avbd/Augmented_VBD-SIGGRAPH25.pdf)
