@@ -6,9 +6,9 @@ Very early WIP of Vertex Block Descent in Houdini. It runs natively without any 
 
 I made an OpenCL version for performance, and a VEX version for debugging. Both are included in the HIP files.
 
-Currently I've implemented everything from [TinyVBD](https://github.com/AnkaChan/TinyVBD), which isn't much.
+Currently I've implemented everything from [TinyVBD](https://github.com/AnkaChan/TinyVBD), which isn't much. TinyVBD (and AVBD) use mass-spring energy.
 
-The current version is very unstable, so it will [explode easily](#why-does-it-explode-randomly).
+The current version is very unstable, [it will explode randomly](#why-does-it-explode-randomly). It's likely an issue with mass-spring energy, which was removed from [the full repo](https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_MassSpring.cpp).
 
 [Download here!](../../releases/latest)
 
