@@ -15,7 +15,7 @@ The current version is very unstable, [it will explode randomly](#why-does-it-ex
 ## Todo
 - [x] Steal from [TinyVBD](https://github.com/AnkaChan/TinyVBD)
   - [x] [Simple mass-spring energy definition](https://github.com/AnkaChan/TinyVBD/blob/main/main.cpp#L381)
-  - [x] [Accelerated convergence method](https://graphics.cs.utah.edu/research/projects/vbd/vbd-siggraph2024.pdf)
+  - [x] [Accelerated convergence method (section 3.8)](https://graphics.cs.utah.edu/research/projects/vbd/vbd-siggraph2024.pdf)
 - [ ] Steal from [full VBD](https://github.com/AnkaChan/Gaia)
   - [ ] [Neo-Hookean energy definition](https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_NeoHookean.cpp), likely more stable
   - [ ] Damping
