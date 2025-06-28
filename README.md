@@ -1,5 +1,7 @@
 # Houdini Vertex Block Descent
 
+<img src="./images/demo.webp" height="300"></img>
+
 Very early WIP of Vertex Block Descent in Houdini. It runs natively without any plugins, as god intended.
 
 I made an OpenCL version for performance, and a VEX version for debugging. Both are included in the HIP files.
