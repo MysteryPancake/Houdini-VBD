@@ -1,6 +1,6 @@
 # Houdini Vertex Block Descent
 
-<img src="./images/demo.webp" height="300"></img>
+<img src="./images/demo.webp" height="300">
 
 Very early WIP of Vertex Block Descent in Houdini. It runs natively without any plugins, as god intended.
 
