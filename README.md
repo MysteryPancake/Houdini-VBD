@@ -8,7 +8,7 @@ Currently I've implemented everything from [TinyVBD](https://github.com/AnkaChan
 
 I'll work on this when I can, but feel free to contribute to speed up progress!
 
-[Download the latest release here!](../../releases/latest)
+[Download here!](../../releases/latest)
 
 ## Todo
 - [x] Steal from [TinyVBD](https://github.com/AnkaChan/TinyVBD)
