@@ -8,7 +8,7 @@ I made an OpenCL version for performance, and a VEX version for debugging. Both 
 
 Currently I've implemented everything from [TinyVBD](https://github.com/AnkaChan/TinyVBD), which isn't much.
 
-I'll work on this when I can, but feel free to contribute to speed up progress!
+The current version is very unstable, so it will [explode easily](#why-does-it-explode-randomly).
 
 [Download here!](../../releases/latest)
 
