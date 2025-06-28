@@ -8,7 +8,7 @@ I made an OpenCL version for performance, and a VEX version for debugging. Both 
 
 Currently I've implemented everything from [TinyVBD](https://github.com/AnkaChan/TinyVBD), which isn't much. TinyVBD (and AVBD) use mass-spring energy.
 
-The current version is very unstable, [it will explode randomly](#why-does-it-explode-randomly). It's likely an issue with mass-spring energy, which was removed from [the full repo](https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_MassSpring.cpp).
+The current version is very unstable, [it will explode randomly](#why-does-it-explode-randomly).
 
 [Download here!](../../releases/latest)
 
