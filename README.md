@@ -8,6 +8,8 @@ Currently I've implemented everything from [TinyVBD](https://github.com/AnkaChan
 
 I'll work on this when I can, but feel free to contribute to speed up progress!
 
+[Download here](../../releases/latest)
+
 ## Todo
 - [x] Steal from [TinyVBD](https://github.com/AnkaChan/TinyVBD)
   - [x] [Simple mass-spring energy definition](https://github.com/AnkaChan/TinyVBD/blob/main/main.cpp#L381)
