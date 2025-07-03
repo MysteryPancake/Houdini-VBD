@@ -108,7 +108,7 @@ Hi Chris, I was wondering what type energy you used for constraints? There were 
 
 ## How Vertex Block Descent works
 
-Ignoring collisions, VBD is only 3 steps. Most are identical to XPBD.
+Ignoring collisions, VBD is really just 3 steps. These steps are identical to XPBD apart from the constraints.
 
 ### 1. Integrate positions
 
@@ -130,6 +130,15 @@ v@P += v@v * f@TimeInc;
 This is the most complicated step, and the difference between VBD and XPBD. Add influences to the force and hessian.
 
 If the influences are correct, moving the position should reduce the variational energy of the system.
+
+> [!CAUTION]
+> **This MUST be run in workgroups based on graph coloring!**
+>
+> If points move while their neighbours access them (like if running in sequential order), it breaks the assumption used by VBD:
+> 
+>  > We adjust each vertex separately, assuming the others remain fixed
+> 
+> This causes growing error each iteration, leading VBD to explode much more than usual.
 
 ```c
 vector force = 0;
