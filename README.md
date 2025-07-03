@@ -108,9 +108,9 @@ Hi Chris, I was wondering what type energy you used for constraints? There were 
 
 ## How Vertex Block Descent works
 
-Ignoring collisions, VBD is only 3 steps. Most are identical to XPBD. Click the headers to view the OpenCL.
+Ignoring collisions, VBD is only 3 steps. Most are identical to XPBD.
 
-### [1. Integrate positions](./ocl/forwardStep.cl)
+### 1. Integrate positions
 
 Add the velocity to the position (same as XPBD). VBD has a few methods of doing this, but they all give similar results.
 
@@ -123,7 +123,9 @@ v@pprevious = v@P;
 v@P += v@v * f@TimeInc;
 ```
 
-### [2. Apply constraints](./ocl/solveConstraintsVBD.cl)
+[OpenCL version](./ocl/forwardStep.cl) | [VEX version (outdated)](./vex/forwardStep.c)
+
+### 2. Apply constraints
 
 This is the most complicated step, and the difference between VBD and XPBD. Add influences to the force and hessian.
 
@@ -143,7 +145,9 @@ accumlateCollisionForceAndHessian(force, hessian); // Influences due to collisio
 v@P += force * invert(hessian); // Reduce the variational energy of the system
 ```
 
-### [3. Update velocity](./ocl/updateVelocity.cl)
+[OpenCL version](./ocl/solveConstraintsVBD.cl) | [VEX version (outdated)](./vex/solveConstraintsVBD.c)
+
+### 3. Update velocity
 
 Update the velocity based on the change in position (same as XPBD). TinyVBD only included first-order velocities.
 
@@ -153,3 +157,5 @@ I included first and second-order Euler velocities (Vellum style).
 // First-order Euler velocities
 v@v = (v@P - v@pprevious) / f@TimeInc;
 ```
+
+[OpenCL version](./ocl/updateVelocity.cl) | [VEX version (outdated)](./vex/updateVelocity.c)
