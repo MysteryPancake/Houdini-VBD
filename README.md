@@ -59,7 +59,7 @@ Neo-hookean energy seems the most stable, since it was the most used in the pape
 
 Ignoring collisions, VBD is really just 3 steps. These steps are nearly identical to XPBD apart from the constraints.
 
-### 1. Integrate positions
+### 1. Integrate the positions
 
 Add the velocity to the position (same as XPBD). VBD has a few methods of doing this, but they all give similar results.
 
@@ -75,9 +75,9 @@ v@P += v@v * f@TimeInc;
 | [OpenCL version](./ocl/forwardStep.cl) | [VEX version (outdated)](./vex/forwardStep.c) |
 | --- | --- |
 
-### 2. Apply constraints
+### 2. Apply the constraints
 
-This is the most complicated step, and the difference between VBD and XPBD. Add influences to the force and hessian.
+This is the most complicated step. The core of VBD is updating the position based on a force vector and a hessian matrix.
 
 If the influences are correct, moving the position should reduce the variational energy of the system.
 
@@ -107,7 +107,7 @@ v@P += force * invert(hessian); // Reduce the variational energy of the system
 | [OpenCL version](./ocl/solveConstraintsVBD.cl) | [VEX version (outdated)](./vex/solveConstraintsVBD.c) |
 | --- | --- |
 
-### 3. Update velocities
+### 3. Update the velocities
 
 Update the velocities based on the change in position (same as XPBD). TinyVBD only included first-order velocities.
 
@@ -124,7 +124,7 @@ v@v = (v@P - v@pprevious) / f@TimeInc;
 ## Why does it explode randomly?
 Great question! This is a problem with VBD in general.
 
-The core of VBD is updating the position based on a force vector and a hessian matrix:
+VBD involves updating the position based on a force vector and a hessian matrix:
 
 ```c
 v@P += force * invert(hessian); // force and hessian depend on the energy definition, eg mass-spring or neo-hookean
