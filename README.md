@@ -77,7 +77,7 @@ v@P += v@v * f@TimeInc;
 
 ### 2. Apply the constraints
 
-This is the most complicated step. The core of VBD is updating the position based on a force vector and a hessian matrix.
+The core idea of VBD is updating the position based on a force vector and a hessian matrix.
 
 If the influences are correct, moving the position should reduce the variational energy of the system.
 
