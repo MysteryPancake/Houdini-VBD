@@ -108,9 +108,9 @@ Hi Chris, I was wondering what type energy you used for constraints? There were 
 
 ## How Vertex Block Descent works
 
-Ignoring collisions, VBD is just 3 steps. Most of these steps are identical to XPBD.
+VBD is only 3 steps, ignoring collisions. Most of these steps are identical to XPBD. Click the headers to view the OpenCL.
 
-### 1. Integrate positions
+### [1. Integrate positions](./ocl/forwardStep.cl)
 
 Add the velocity to the position (same as XPBD). VBD has a few methods of doing this, but they all give similar results.
 
@@ -123,7 +123,7 @@ v@pprevious = v@P;
 v@P += v@v * f@TimeInc;
 ```
 
-### 2. Apply constraints
+### [2. Apply constraints](./ocl/solveConstraintsVBD.cl)
 
 This is the most complicated step, and the difference between VBD and XPBD. Add influences to the force and hessian.
 
@@ -143,9 +143,9 @@ accumlateCollisionForceAndHessian(force, hessian); // Influences due to collisio
 v@P += force * invert(hessian); // Reduce the variational energy of the system
 ```
 
-### 3. Recalculate velocity
+### [3. Update velocity](./ocl/updateVelocity.cl)
 
-Recalculate the velocity based on the change in position (same as XPBD). TinyVBD only included first-order velocities.
+Update the velocity based on the change in position (same as XPBD). TinyVBD only included first-order velocities.
 
 I included first and second-order Euler velocities (Vellum style).
 
