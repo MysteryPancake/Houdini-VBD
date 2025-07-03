@@ -55,32 +55,9 @@ I've seen many different energy definitions, including mass-spring (used by [Tin
 
 Neo-hookean energy seems the most stable, since it was the most used in the paper.
 
-## Why does it explode randomly?
-Great question! This is a problem with VBD in general.
+## How does Vertex Block Descent run?
 
-The core of VBD is updating the position based on a force vector and a hessian matrix:
-
-```c
-v@P += force * invert(hessian); // force and hessian depend on the energy definition, eg mass-spring or neo-hookean
-```
-
-`invert(hessian)` is very unstable, so everyone tries to bandaid it in various ways. The [VBD paper](https://graphics.cs.utah.edu/research/projects/vbd/vbd-siggraph2024.pdf) uses the determinant of the matrix:
-
-```c
-if (abs(determinant(hessian)) > 1e-7) { // if |det(H𝑖)| > 𝜖 for some small threshold 𝜖
-  v@P += force * invert(hessian);
-}
-```
-
-This helps, but it also explodes when the values gets too large (for example with very stiff constraints).
-
-The new [AVBD paper](https://graphics.cs.utah.edu/research/projects/avbd/Augmented_VBD-SIGGRAPH25.pdf) uses an approximation to make the hessian symmetric positive definite (SPD) to allow LDLT decomposition instead.
-
-Also it probably explodes since I'm using [mass-spring energy](https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_MassSpring.cpp) instead of [neo-hookean](https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_NeoHookean.cpp) energy. They [removed mass-spring energy](https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_MassSpring.cpp) from full VBD, likely due to excessive exploding.
-
-## How Vertex Block Descent works
-
-Ignoring collisions, VBD is really just 3 steps. These steps are identical to XPBD apart from the constraints.
+Ignoring collisions, VBD is really just 3 steps. These steps are nearly identical to XPBD apart from the constraints.
 
 ### 1. Integrate positions
 
@@ -143,6 +120,29 @@ v@v = (v@P - v@pprevious) / f@TimeInc;
 
 | [OpenCL version](./ocl/updateVelocity.cl) | [VEX version (outdated)](./vex/updateVelocity.c) |
 | --- | --- |
+
+## Why does it explode randomly?
+Great question! This is a problem with VBD in general.
+
+The core of VBD is updating the position based on a force vector and a hessian matrix:
+
+```c
+v@P += force * invert(hessian); // force and hessian depend on the energy definition, eg mass-spring or neo-hookean
+```
+
+`invert(hessian)` is very unstable, so everyone tries to bandaid it in various ways. The [VBD paper](https://graphics.cs.utah.edu/research/projects/vbd/vbd-siggraph2024.pdf) uses the determinant of the matrix:
+
+```c
+if (abs(determinant(hessian)) > 1e-7) { // if |det(H𝑖)| > 𝜖 for some small threshold 𝜖
+  v@P += force * invert(hessian);
+}
+```
+
+This helps, but it also explodes when the values gets too large (for example with very stiff constraints).
+
+The new [AVBD paper](https://graphics.cs.utah.edu/research/projects/avbd/Augmented_VBD-SIGGRAPH25.pdf) uses an approximation to make the hessian symmetric positive definite (SPD) to allow LDLT decomposition instead.
+
+Also it probably explodes since I'm using [mass-spring energy](https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_MassSpring.cpp) instead of [neo-hookean](https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_NeoHookean.cpp) energy. They [removed mass-spring energy](https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_MassSpring.cpp) from full VBD, likely due to excessive exploding.
 
 ## AVBD Q&A
 
