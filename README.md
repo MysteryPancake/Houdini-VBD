@@ -159,9 +159,9 @@ v@P += force * invert(hessian); // Reduce the variational energy of the system
 | [OpenCL version](./ocl/solveConstraintsVBD.cl) | [VEX version (outdated)](./vex/solveConstraintsVBD.c) |
 | --- | --- |
 
-### 3. Update velocity
+### 3. Update velocities
 
-Update the velocity based on the change in position (same as XPBD). TinyVBD only included first-order velocities.
+Update the velocities based on the change in position (same as XPBD). TinyVBD only included first-order velocities.
 
 I included first and second-order Euler velocities (Vellum style).
 
