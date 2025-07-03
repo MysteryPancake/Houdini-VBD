@@ -10,7 +10,7 @@ Currently it has everything from [TinyVBD](https://github.com/AnkaChan/TinyVBD),
 
 The current version is very unstable, [it will explode randomly](#why-does-it-explode-randomly).
 
-| [Download here!](../../releases/latest) |
+| [Download the HIP file!](../../releases/latest) |
 | --- |
 
 ## Todo
