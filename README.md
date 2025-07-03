@@ -123,7 +123,8 @@ v@pprevious = v@P;
 v@P += v@v * f@TimeInc;
 ```
 
-[OpenCL version](./ocl/forwardStep.cl) | [VEX version (outdated)](./vex/forwardStep.c)
+| [OpenCL version](./ocl/forwardStep.cl) | [VEX version (outdated)](./vex/forwardStep.c) |
+| --- | --- |
 
 ### 2. Apply constraints
 
@@ -154,7 +155,8 @@ accumlateCollisionForceAndHessian(force, hessian); // Influences due to collisio
 v@P += force * invert(hessian); // Reduce the variational energy of the system
 ```
 
-[OpenCL version](./ocl/solveConstraintsVBD.cl) | [VEX version (outdated)](./vex/solveConstraintsVBD.c)
+| [OpenCL version](./ocl/solveConstraintsVBD.cl) | [VEX version (outdated)](./vex/solveConstraintsVBD.c) |
+| --- | --- |
 
 ### 3. Update velocity
 
@@ -167,4 +169,5 @@ I included first and second-order Euler velocities (Vellum style).
 v@v = (v@P - v@pprevious) / f@TimeInc;
 ```
 
-[OpenCL version](./ocl/updateVelocity.cl) | [VEX version (outdated)](./vex/updateVelocity.c)
+| [OpenCL version](./ocl/updateVelocity.cl) | [VEX version (outdated)](./vex/updateVelocity.c) |
+| --- | --- |
