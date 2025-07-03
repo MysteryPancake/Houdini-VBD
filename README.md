@@ -108,7 +108,7 @@ Hi Chris, I was wondering what type energy you used for constraints? There were 
 
 ## How Vertex Block Descent works
 
-VBD is only 3 steps, ignoring collisions. Most of these steps are identical to XPBD. Click the headers to view the OpenCL.
+Ignoring collisions, VBD is only 3 steps. Most are identical to XPBD. Click the headers to view the OpenCL.
 
 ### [1. Integrate positions](./ocl/forwardStep.cl)
 
