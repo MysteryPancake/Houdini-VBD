@@ -94,7 +94,7 @@ If the influences are correct, moving the position should reduce the variational
 vector force = 0;
 matrix3 hessian = 0;
 
-// Add forces to the force and hessian variables
+// Add influences to the force and hessian variables
 accumulateInertiaForceAndHessian(force, hessian); // Influences due to mass and inertia
 accumulateMaterialForceAndHessian(force, hessian); // Influences due to constraints (eg mass-spring or neo-hookean)
 accumulateDampingForceAndHessian(force, hessian); // Influences due to damping
