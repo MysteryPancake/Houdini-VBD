@@ -14,7 +14,7 @@ The current version is very unstable, [it will explode randomly](#why-does-it-ex
 
 ## Todo
 - [x] Steal from [TinyVBD](https://github.com/AnkaChan/TinyVBD)
-  - [x] [Simple mass-spring energy definition](https://github.com/AnkaChan/TinyVBD/blob/main/main.cpp#L381)
+  - [x] [Mass-spring/StVK energy definition](https://github.com/AnkaChan/TinyVBD/blob/main/main.cpp#L381)
   - [x] [Accelerated convergence method (section 3.8)](https://graphics.cs.utah.edu/research/projects/vbd/vbd-siggraph2024.pdf)
 - [ ] Steal from [full VBD](https://github.com/AnkaChan/Gaia)
   - [ ] [Neo-hookean energy definition](https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_NeoHookean.cpp), likely more stable
@@ -50,9 +50,9 @@ Here's a quick comparison between VBD and XPBD:
 
 The most important part of VBD is the energy definition, but no one seems to agree on this.
 
-I've seen many different energy definitions, including mass-spring energy (used by [TinyVBD](https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_MassSpring.cpp) and [AVBD](https://github.com/savant117/avbd-demo2d/blob/main/source/spring.cpp#L40), but [removed from full VBD](https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_MassSpring.cpp)), StVK (can't find this anywhere, maybe the same as mass-spring) and neo-hookean (used by [full VBD](https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_NeoHookean.cpp)).
+I've seen many different energy definitions, including mass-spring (used by [TinyVBD](https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_MassSpring.cpp) and [AVBD](https://github.com/savant117/avbd-demo2d/blob/main/source/spring.cpp#L40), but [removed from full VBD](https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_MassSpring.cpp)) and neo-hookean (used by [full VBD](https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_NeoHookean.cpp)).
 
-I'm guessing neo-hookean energy is best since it was the most used in the paper, but haven't tried it yet.
+Neo-hookean energy seems the most stable, since it was the most used in the paper.
 
 ## Why does it explode randomly?
 Great question! This is a problem with VBD in general.
@@ -96,7 +96,7 @@ Hi Chris, In the original VBD paper and in TinyVBD, they used an acceleration me
 
 ### Energy definition used
 
-Hi Chris, I was wondering what type energy you used for constraints? There were multiple used in the VBD paper, including mass-spring, StVK, and neo-hookean. It looks like you used mass-spring energy. Is this correct, or did you use neo-hookean? Thanks!
+Hi Chris, I was wondering what type energy you used for constraints? There were multiple used in the VBD paper, including mass-spring and neo-hookean. It looks like you used mass-spring energy. Is this correct, or did you use neo-hookean? Thanks!
 
 > Hello,
 > So you are correct, in our demos we only used a simple spring energy for the deformable examples, as we weren't focused on rehashing what the original VBD paper showed. However, in AVBD, you can use any energy that works in VBD, such as the ones you mentioned. This is because AVBD is purely an extension of VBD. The only thing to keep in mind with those more complex energy types, is that you need to be careful about how you solve each block since their hessians can be indefinite. In general, you can follow the same pattern that AVBD uses for constraint energies. That is, decompose the hessian into an SPD part and a non-SPD part, then use the diagonal lumped approximation proposed in the paper for the non-SPD part.
