@@ -109,7 +109,7 @@ static inline void accumulateInertiaForceAndHessian(
 }
 
 // Include influence from spring constraints, for mass-spring energy
-static inline void accumlateMaterialForceAndHessian_MassSpring(
+static inline void accumulateMaterialForceAndHessian_MassSpring(
     fpreal3 *force,
     mat3 hessian,
     const int idx,
@@ -238,7 +238,7 @@ kernel void solveConstraintsVBD(
     accumulateInertiaForceAndHessian(&force, hessian, mass, P, inertia, dtSqrReciprocal);
     
     // Include influence from spring constraints, for mass-spring energy
-    accumlateMaterialForceAndHessian_MassSpring(&force, hessian, idx,
+    accumulateMaterialForceAndHessian_MassSpring(&force, hessian, idx,
         _bound_pointprims, _bound_pointprims_index, _bound_primpoints, _bound_primpoints_index,
         _bound_P, _bound_stiffness, _bound_restlength);
     
