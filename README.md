@@ -67,8 +67,8 @@ I included first and second-order Euler integration (Vellum style), with a flag 
 
 ```c
 // First-order Euler integration
-v@v += gravity * f@TimeInc;
 v@pprevious = v@P;
+v@v += gravity * f@TimeInc;
 v@P += v@v * f@TimeInc;
 ```
 
