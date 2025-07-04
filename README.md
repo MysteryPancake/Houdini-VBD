@@ -24,7 +24,7 @@ The current version is very unstable, [it will explode randomly](#why-does-it-ex
   - [ ] External collisions
   - [ ] Friction
 - [ ] Steal from [AVBD](https://graphics.cs.utah.edu/research/projects/avbd/)
-  - [ ] [LDLT decomposition](https://graphics.cs.utah.edu/research/projects/avbd/Augmented_VBD-SIGGRAPH25.pdf) to improve stability
+  - [x] [LDLT decomposition](https://graphics.cs.utah.edu/research/projects/avbd/Augmented_VBD-SIGGRAPH25.pdf) to improve stability
   - [ ] [Hard constraints](https://graphics.cs.utah.edu/research/projects/avbd/Augmented_VBD-SIGGRAPH25.pdf)
   - [ ] All other improvements
 - [ ] Touch grass
