@@ -6,9 +6,7 @@ Very early WIP of Vertex Block Descent in Houdini. It runs natively without plug
 
 There's an OpenCL version for performance, and a VEX version for debugging. Both are included in the HIP files.
 
-Currently it has everything from [TinyVBD](https://github.com/AnkaChan/TinyVBD), which isn't much. TinyVBD (and AVBD) use mass-spring energy.
-
-The current version is very unstable, [it will explode randomly](#why-does-it-explode-randomly).
+Currently it has everything from [TinyVBD](https://github.com/AnkaChan/TinyVBD) and some bits from [AVBD](https://graphics.cs.utah.edu/research/projects/avbd/).
 
 | [Download the HIP file!](../../releases/latest) |
 | --- |
@@ -122,7 +120,8 @@ v@v = (v@P - v@pprevious) / f@TimeInc;
 | --- | --- |
 
 ## Why does it explode randomly?
-Great question! This is a problem with VBD in general.
+
+This solver used to explode every 5 seconds, but now it's much better. Explosions are a common issue with VBD.
 
 VBD involves updating the position based on a force vector and a hessian matrix:
 
@@ -140,9 +139,7 @@ if (abs(determinant(hessian)) > 1e-7) { // if |det(H𝑖)| > 𝜖 for some small
 
 This helps, but it also explodes when the values gets too large (for example with very stiff constraints).
 
-The new [AVBD paper](https://graphics.cs.utah.edu/research/projects/avbd/Augmented_VBD-SIGGRAPH25.pdf) uses an approximation to make the hessian symmetric positive definite (SPD) to allow LDLT decomposition instead.
-
-Also it probably explodes since I'm using [mass-spring energy](https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_MassSpring.cpp) instead of [neo-hookean](https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_NeoHookean.cpp) energy. They [removed mass-spring energy](https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_MassSpring.cpp) from full VBD, likely due to excessive exploding.
+The new [AVBD paper](https://graphics.cs.utah.edu/research/projects/avbd/Augmented_VBD-SIGGRAPH25.pdf) uses an approximation to make the hessian positive semi-definite. I found this massively improves the stability.
 
 ## AVBD Q&A
 
