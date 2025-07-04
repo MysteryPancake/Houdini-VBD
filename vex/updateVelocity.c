@@ -3,7 +3,7 @@
 
 if (f@mass <= 0) return;
 
+v@v = (v@P - v@pprevious) / f@TimeInc;
+
 v@vprevious = v@v;
 i@has_vprevious = 1;
-
-v@v = (v@P - v@pprevious) / f@TimeInc;
