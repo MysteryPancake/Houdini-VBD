@@ -6,6 +6,8 @@ Very early WIP of Vertex Block Descent in Houdini. It runs natively without plug
 
 There's an OpenCL version for performance, and a VEX version for debugging. Both are included in the HIP files.
 
+Also included for fun, I injected it into the Vellum solver so you can solve both XPBD and VBD at the same time!
+
 Currently it has everything from [TinyVBD](https://github.com/AnkaChan/TinyVBD) and some bits from [AVBD](https://graphics.cs.utah.edu/research/projects/avbd/).
 
 | [Download the HIP file!](../../releases/latest) |
