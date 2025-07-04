@@ -1,17 +1,14 @@
 #include <matrix.h>
 
-//#define USE_AVBD_SOLVE
-
 // Slightly faster but memory unsafe
 #define entriesAt(_arr_, _idx_) (_arr_##_index[_idx_+1] - _arr_##_index[_idx_])
 #define compAt(_arr_, _idx_, _compidx_) _arr_[_arr_##_index[_idx_] + _compidx_]
 //#define entriesAt(_arr_, _idx_) ((_idx_ >= 0 && _idx_ < _arr_##_length) ? (_arr_##_index[_idx_+1] - _arr_##_index[_idx_]) : 0)
 //#define compAt(_arr_, _idx_, _compidx_) ((_idx_ >= 0 && _idx_ < _arr_##_length && _compidx_ >= 0 && _compidx_ < entriesAt(_arr_, _idx_)) ? _arr_[_arr_##_index[_idx_] + _compidx_] : 0)
 
-#ifdef USE_AVBD_SOLVE
-// f * invert(h) using LDLT decomposition, less stable in my tests
+// f * invert(h) using LDLT decomposition
 // From https://github.com/savant117/avbd-demo2d/blob/main/source/maths.h#L323
-static inline fpreal3 solve(
+static inline fpreal3 solveLDLT(
     const fpreal3 force,
     const mat3 hessian)
 {
@@ -41,10 +38,10 @@ static inline fpreal3 solve(
 
     return x;
 }
-#else
+
 // out = f * invert(h) with a check similar to abs(det(h)) > epsilon
 // From https://github.com/AnkaChan/CuMatrix/blob/main/CuMatrix/MatrixOps/CuMatrix.h#L235
-static inline int solve(
+static inline int solveDirect(
     const fpreal3 force,
     const mat3 hessian,
     fpreal3 *out,
@@ -71,7 +68,6 @@ static inline int solve(
     (*out).z = ( (s5 * s1 - s2 * s4) * force.x + -(s5 * s0 - s2 * s3) * force.y +  (s4 * s0 - s1 * s3) * force.z) / det;
     return 1;
 }
-#endif
 
 // Used for accelerated convergence, tends to explode. Probably will remove later
 // From https://github.com/AnkaChan/TinyVBD/blob/main/main.cpp#L193
@@ -83,11 +79,11 @@ static inline fpreal getAcceleratorOmega(
     switch (order)
     {
         case 1:
-            return 1.0;
+            return 1.0f;
         case 2:
-            return 2.0 / (2.0 - (pho * pho));
+            return 2.0f / (2.0f - (pho * pho));
         default:
-            return 4.0 / (4.0 - (pho * pho) * prevOmega);
+            return 4.0f / (4.0f - (pho * pho) * prevOmega);
     }
 }
 
@@ -106,6 +102,19 @@ static inline void accumulateInertiaForceAndHessian(
     hessian[0] += (fpreal3)(md, 0.0f, 0.0f);
     hessian[1] += (fpreal3)(0.0f, md, 0.0f);
     hessian[2] += (fpreal3)(0.0f, 0.0f, md);
+}
+
+// Diagonal PSD approximation from AVBD paper, greatly improves stability
+static inline void psdApproximation(const mat3 in, mat3 out)
+{
+    mat3zero(out);
+    for (int col = 0; col < 3; ++col)
+    {
+        fpreal x = in[0][col];
+        fpreal y = in[1][col];
+        fpreal z = in[2][col];
+        out[col][col] = sqrt(x*x + y*y + z*z);
+    }
 }
 
 // Include influence from spring constraints, for mass-spring energy
@@ -142,14 +151,39 @@ static inline void accumulateMaterialForceAndHessian_MassSpring(
         fpreal stiffness = _bound_stiffness[prim];
         fpreal lengthScale = l0 / l;
         fpreal l2 = l * l;
-        hessian[0] += stiffness * ((fpreal3)(1.0f, 0.0f, 0.0f) - lengthScale * ((fpreal3)(1.0f, 0.0f, 0.0f) - (diff * diff.x) / l2));
-        hessian[1] += stiffness * ((fpreal3)(0.0f, 1.0f, 0.0f) - lengthScale * ((fpreal3)(0.0f, 1.0f, 0.0f) - (diff * diff.y) / l2));
-        hessian[2] += stiffness * ((fpreal3)(0.0f, 0.0f, 1.0f) - lengthScale * ((fpreal3)(0.0f, 0.0f, 1.0f) - (diff * diff.z) / l2));
+        
+        mat3 h;
+        h[0] = stiffness * ((fpreal3)(1.0f, 0.0f, 0.0f) - lengthScale * ((fpreal3)(1.0f, 0.0f, 0.0f) - (diff * diff.x) / l2));
+        h[1] = stiffness * ((fpreal3)(0.0f, 1.0f, 0.0f) - lengthScale * ((fpreal3)(0.0f, 1.0f, 0.0f) - (diff * diff.y) / l2));
+        h[2] = stiffness * ((fpreal3)(0.0f, 0.0f, 1.0f) - lengthScale * ((fpreal3)(0.0f, 0.0f, 1.0f) - (diff * diff.z) / l2));
+
+        // Diagonal PSD approximation from AVBD greatly improves the stability
+        mat3 approx;
+        psdApproximation(h, approx);
+        mat3add(hessian, approx, hessian);
         
         // Force for the mass-spring energy definition
         (*force) += (stiffness * (l0 - l) / l) * diff * (pt0 == idx ? 1 : -1);
     }
 }
+
+// From https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBDPhysics.cpp#L2786
+// This doesn't seem to work properly, but it produces cool patterns
+/* static inline void accumulateDampingForceAndHessian(
+    fpreal3 *force,
+    mat3 hessian,
+    const fpreal3 velocity,
+    const fpreal timeinc,
+    const mat3 K,
+    const fpreal gamma)
+{
+    fpreal3 dampingForce = -gamma * mat3vecmul(K, velocity);
+    mat3 dampingHessian;
+    mat3scale(dampingHessian, K, gamma / timeinc);
+    
+    (*force) += dampingForce;
+    mat3add(hessian, dampingHessian, hessian);
+} */
 
 // I stole the workgroup span code from Vellum (pbd_constraints.cl)
 // It ensures stuff runs properly regardless how the workgroups are split
@@ -166,7 +200,7 @@ kernel void solveConstraintsVBD(
     int color_offset,
     int color_length,
 #endif
-    fpreal timeinc,
+    const fpreal timeinc,
     int _bound_P_length,
     global fpreal * restrict _bound_P,
     int _bound_inertia_length,
@@ -185,12 +219,15 @@ kernel void solveConstraintsVBD(
     global int * restrict _bound_primpoints,
     int _bound_omega_length,
     global fpreal * restrict _bound_omega,
-    fpreal accel_rho,
+    const fpreal accel_rho,
     int iteration,
-    int use_accel,
+    const int use_accel,
     int _bound_plastiter_length,
     global fpreal * restrict _bound_plastiter,
-    fpreal epsilon
+    const int solvemethod,
+    const fpreal minForce,
+    const fpreal minHessian,
+    const fpreal convergence
 )
 {
 #ifdef SINGLE_WORKGROUP
@@ -223,12 +260,12 @@ kernel void solveConstraintsVBD(
     idx += color_offset;
     
     fpreal mass = _bound_mass[idx];
-    if (mass <= 0.0f) SKIPWORKITEM; // Skip pinned points
+    if (mass <= 0) SKIPWORKITEM; // Skip pinned points
     
     fpreal3 P = vload3(idx, _bound_P);
     fpreal3 P_before_solve = P;
     fpreal3 inertia = vload3(idx, _bound_inertia);
-    fpreal dtSqrReciprocal = 1.0f / (timeinc * timeinc);
+    fpreal dtSqrReciprocal = 1 / (timeinc * timeinc);
     
     fpreal3 force = (fpreal3)(0.0f);
     mat3 hessian;
@@ -244,21 +281,24 @@ kernel void solveConstraintsVBD(
     
     // The core of VBD is P += force * invert(hessian)
     // Sadly invert(hessian) is mega unstable, so we bandaid it below
-    #ifdef USE_AVBD_SOLVE
-        P += solve(force, hessian);
-        vstore3(P, idx, _bound_P);
-    #else
-        if (dot(force, force) > (epsilon * epsilon))
+    if (dot(force, force) > (minForce * minForce))
+    {
+        if (solvemethod == 0)
         {
             fpreal3 descentDirection;
-            int success = solve(force, hessian, &descentDirection, epsilon);
+            int success = solveDirect(force, hessian, &descentDirection, minHessian);
             if (success)
             {
-                P += descentDirection;
+                P += descentDirection * convergence;
                 vstore3(P, idx, _bound_P);
             }
         }
-    #endif
+        else if (fabs(det3(hessian)) > minHessian)
+        {
+            P += solveLDLT(force, hessian) * convergence;
+            vstore3(P, idx, _bound_P);
+        }
+    }
     
     // Accelerated convergence tends to explode, so it's disabled by default
     if (use_accel) 
