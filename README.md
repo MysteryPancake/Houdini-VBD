@@ -1,12 +1,14 @@
 # Houdini Vertex Block Descent
 
-<img src="./images/demo.webp" height="300">
+<img src="./images/demo.webp" width="300">
 
 Very early WIP of Vertex Block Descent in Houdini. It runs natively without plugins, as god intended.
 
 There's an OpenCL version for performance, and a VEX version for debugging. Both are included in the HIP files.
 
 Currently it has everything from [TinyVBD](https://github.com/AnkaChan/TinyVBD) and some bits from [AVBD](https://graphics.cs.utah.edu/research/projects/avbd/).
+
+Also included for fun, a hacked version of Vellum that can solve XPBD and VBD at the same time!
 
 | [Download the HIP file!](../../releases/latest) |
 | --- |
