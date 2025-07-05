@@ -17,7 +17,7 @@ Currently it has everything from [TinyVBD](https://github.com/AnkaChan/TinyVBD) 
   - [x] [Accelerated convergence method (section 3.8)](https://graphics.cs.utah.edu/research/projects/vbd/vbd-siggraph2024.pdf)
 - [ ] Steal from [full VBD](https://github.com/AnkaChan/Gaia)
   - [ ] [Neo-hookean energy definition](https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_NeoHookean.cpp), likely more stable
-  - [ ] Damping
+  - [x] Damping
   - [ ] Self collisions
   - [ ] External collisions
   - [ ] Friction
