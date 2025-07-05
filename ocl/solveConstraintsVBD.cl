@@ -162,6 +162,24 @@ static inline void accumulateMaterialForceAndHessian_MassSpring(
     (*force) += (stiffness * (l0 - l) / l) * diff * (pt0 == idx ? 1 : -1);
 }
 
+// From https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBDPhysics.cpp#L2786
+// Doesn't always work well, but makes cool looking patterns
+static inline void accumulateDampingForceAndHessian(
+    fpreal3 *force,
+    mat3 hessian,
+    const fpreal3 velocity,
+    const fpreal timeinc,
+    const mat3 K,
+    const fpreal gamma)
+{
+    fpreal3 dampingForce = -gamma * mat3vecmul(K, velocity);
+    mat3 dampingHessian;
+    mat3scale(dampingHessian, K, gamma / timeinc);
+    
+    (*force) += dampingForce;
+    mat3add(hessian, dampingHessian, hessian);
+}
+
 // I stole the workgroup span code from Vellum (pbd_constraints.cl)
 // It ensures stuff runs properly regardless how the workgroups are split
 // Check the "Use Single Workgroup" setting in the Options tab to see what it does
@@ -206,7 +224,10 @@ kernel void solveConstraintsVBD(
     const fpreal minHessian,
     const fpreal convergence,
     int _bound_type_length,
-    global int * restrict _bound_type
+    global int * restrict _bound_type,
+    int _bound_pprevious_length,
+    global fpreal * restrict _bound_pprevious,
+    const fpreal damping
 )
 {
 #ifdef SINGLE_WORKGROUP
@@ -253,6 +274,17 @@ kernel void solveConstraintsVBD(
     // Include influence from inertia
     accumulateInertiaForceAndHessian(&force, hessian, mass, P, inertia, dtSqrReciprocal);
     
+    // Damping only affects the hessian for material forces in GAIA
+    // https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBDPhysics.cpp#L2347-L2351
+    mat3 tmpHessian;
+    fpreal3 v;
+    if (damping > 0)
+    {
+        fpreal3 pprevious = vload3(idx, _bound_pprevious);
+        v = (P - pprevious) / timeinc;
+        mat3copy(hessian, tmpHessian);
+    }
+    
     // For each edge connected to the current point
     int len = entriesAt(_bound_pointprims, idx);
     for (int con = 0; con < len; ++con)
@@ -270,6 +302,14 @@ kernel void solveConstraintsVBD(
                 _bound_primpoints, _bound_primpoints_index,
                 _bound_P, _bound_stiffness, _bound_restlength);
         }
+    }
+    
+    // Include influence from damping, doesn't work well but makes cool patterns
+    if (damping > 0)
+    {
+        mat3 K;
+        mat3sub(hessian, tmpHessian, K);
+        accumulateDampingForceAndHessian(&force, hessian, v, timeinc, K, damping * timeinc);
     }
     
     // The core of VBD is P += force * invert(hessian)
