@@ -1,27 +1,20 @@
 // VEX used for debugging the OpenCL version (ocl/forwardStep.cl)
 // Slow and outdated now (rewrite of TinyVBD), but easier to read
 
-if (f@mass <= 0) return;
+if (f@mass <= 0) return; // Skip pinned points
 
 vector gravity = chv("gravity");
-float gravNorm = chf("gravity_norm");
 
-v@v += gravity * f@TimeInc;
-v@inertia = v@P + v@v * f@TimeInc;
 v@pprevious = v@P;
 
-if (i@has_vprevious) {
-    v@accel = (v@v - v@vprevious) / f@TimeInc;
-    i@has_accel = 1;
-}
+// First order integration, same as Vellum
+v@inertia = v@P + v@v * f@TimeInc + gravity * f@TimeInc * f@TimeInc;
 
-if (i@has_accel) {
-    vector gravDir = normalize(gravity);
-    float accelComponent = min(gravNorm, dot(v@accel, gravDir));
-    if (accelComponent < 1e-5) accelComponent = 0;
-    v@P += v@vprevious * f@TimeInc + accelComponent * gravDir * f@TimeInc * f@TimeInc;
-} else {
-    v@P = v@inertia;
-}
+// Adaptive warmstart
+vector accel = (v@v - v@vprevious) / f@TimeInc;
+float gravNorm = length(v@gravity);
+float accelWeight = clamp(dot(v@accel, v@gravity / gravNorm) / gravNorm, 0, 1);
+v@P = v@inertia + accelWeight * v@gravity * f@TimeInc * f@TimeInc;
 
-f@omega = 1.0;
+// Used for accelerated convergence
+f@omega = 1;

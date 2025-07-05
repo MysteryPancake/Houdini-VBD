@@ -1,12 +1,12 @@
 // VEX used for debugging the OpenCL version (ocl/solveConstraintsVBD.cl)
 // Slow and outdated now (rewrite of TinyVBD), but easier to read
 
-if (f@mass <= 0) return;
+if (f@mass <= 0) return; // Skip pinned points
 
 vector previterpos = v@P;
-
 float dtSqrReciprocal = 1.0 / (f@TimeInc * f@TimeInc);
 
+// Accumulate inertia forces
 3@h = f@mass * dtSqrReciprocal * ident();
 v@f = f@mass * (v@inertia - v@P) * dtSqrReciprocal;
 
@@ -22,7 +22,7 @@ foreach (int con; constraints) {
     float l = length(diff);
     float l0 = prim(1, "restlength", con);
     
-    // evaluate hessian
+    // Accumulate hessian and forces for each constraint (mass-spring energy)
     float stiffness = prim(1, "stiffness", con);
     3@h += stiffness * (ident() - (l0 / l) * (ident() - outerproduct(diff, diff) / (l * l)));
     v@f += (stiffness * (l0 - l) / l) * diff * (v1 == i@ptnum ? 1 : -1);
@@ -48,7 +48,7 @@ float getAcceleratorOmega(int order; float pho; float prevOmega) {
 int iter = detail(-2, "iteration", 0);
 f@omega = getAcceleratorOmega(iter + 1, chf("acceleration_rho"), f@omega);
 
-// Apply accelerator, tends to be unstable so disabled by default
-if (f@omega > 1.0) v@P = f@omega * (v@P - v@plast) + v@plast;
+// Apply accelerated convergence, tends to be unstable so disabled by default
+if (f@omega > 1) v@P = f@omega * (v@P - v@plast) + v@plast;
 
 v@plast = previterpos;

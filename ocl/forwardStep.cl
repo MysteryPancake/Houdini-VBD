@@ -16,6 +16,7 @@
     
     @pprevious.set(@P);
     
+    // First order integration, same as Vellum
     fpreal3 inertia = @P + @v * @TimeInc;
     @inertia.set(inertia + @gravity * @TimeInc * @TimeInc);
     
