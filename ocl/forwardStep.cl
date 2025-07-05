@@ -1,13 +1,13 @@
-#bind parm gravity fpreal3 val={0, -9.81, 0}
+#bind parm gravity fpreal3 val={0, -9.80665, 0}
 #bind parm initialization int val=0
 
 #bind point &P fpreal3
-#bind point &v fpreal3 val=0
-#bind point &inertia fpreal3 val=0
+#bind point &v fpreal3
+#bind point &inertia fpreal3
 #bind point &pprevious fpreal3
 #bind point &plastiter fpreal3
 #bind point &omega fpreal val=1
-#bind point vprevious fpreal3 val=0
+#bind point vprevious fpreal3
 #bind point mass fpreal val=1
 
 @KERNEL

@@ -144,7 +144,7 @@ static inline void accumulateMaterialForceAndHessian_MassSpring(
     fpreal3 diff = p0 - p1;
     fpreal l = length(diff);
     fpreal l0 = _bound_restlength[prim];
-    fpreal stiffness = _bound_stiffness[prim];
+    fpreal stiffness = _bound_stiffness[prim] * 10; // VBD is around 10x less stiff than Vellum
     fpreal lengthScale = l0 / l;
     fpreal l2 = l * l;
     
