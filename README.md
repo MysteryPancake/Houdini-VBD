@@ -59,7 +59,7 @@ Ignoring collisions, VBD is really just 3 steps. These steps are nearly identica
 
 ### 1. Integrate the positions
 
-Add the velocity to the position (same as XPBD). VBD uses a warmstarting strategy to scale the gravity term below.
+Add the velocity to the position (same as Vellum). VBD uses a warmstarting strategy to scale the gravity term below.
 
 ```c
 // First-order integration
@@ -104,9 +104,7 @@ v@P += force * invert(hessian); // Reduce the variational energy of the system
 
 ### 3. Update the velocities
 
-Update the velocities based on the change in position (same as XPBD). TinyVBD only included first-order velocities.
-
-I included first and second-order velocities (Vellum style).
+Update the velocities based on the change in position (same as Vellum).
 
 ```c
 // First-order velocities
