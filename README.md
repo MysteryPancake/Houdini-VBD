@@ -8,8 +8,6 @@ There's an OpenCL version for performance, and a VEX version for debugging. Both
 
 Currently it has everything from [TinyVBD](https://github.com/AnkaChan/TinyVBD) and some bits from [AVBD](https://graphics.cs.utah.edu/research/projects/avbd/).
 
-Also included for fun, a hacked version of Vellum that can solve XPBD and VBD at the same time!
-
 | [Download the HIP file!](../../releases/latest) |
 | --- |
 
@@ -171,3 +169,35 @@ Hi Chris, I was wondering what type energy you used for constraints? There were 
 
 > No. The AVBD tests we have are for contacts and joints. VBD already covers soft bodies. AVBD makes no changes to that.
 > -Cem
+
+### [Previous velocity discrepency](https://github.com/savant117/avbd-demo2d/issues/4)
+
+> [!NOTE]
+> I noticed this while looking into Vellum. Vellum uses 4 variables to track the previous 2 values of position and velocity:
+>
+> - `@pprevious` (`@P` 1 substep ago)
+> - `@plast` (`@P` 2 substeps ago)
+> - `@vprevious` (`@v` 1 substep ago)
+> - `@vlast` (`@v` 2 substeps ago)
+>
+> Vellum sets all of these at the start of each substep. They're needed for 1st and 2nd order integration.
+>
+> However, TinyVBD and AVBD set `@vprevious` in a different place. I thought this was a typo, but turns out it's not.
+
+Hello, I was wondering if the order of these 2 lines is correct?
+
+```cpp
+body->prevVelocity = body->velocity; 
+if (body->mass > 0) 
+   body->velocity = (body->position - body->initial) / dt;
+```
+
+It seems like the previous velocity should be set after it gets recalculated, instead of before.
+
+I saw the [same code in TinyVBD](https://github.com/AnkaChan/TinyVBD/blob/main/main.cpp#L349-L350), but I believe it is a mistake. The [opposite code is present in GAIA](https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_BaseMaterial.h#L256).
+
+> The current code is correct (and probably in TinyVBD as well), since we use prevVelocity to compute an acceleration estimate during the adaptive warmstarting at the beginning of the step:
+>
+> `float3 accel = (body->velocity - body->prevVelocity) / dt;`
+>
+> If we switched the order as suggested, then this acceleration would always be zero, and the adaptive warmstart would not help.
