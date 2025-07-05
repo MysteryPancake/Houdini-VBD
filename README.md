@@ -167,7 +167,7 @@ Hi Chris, I was wondering what type energy you used for constraints? There were 
 > No. The AVBD tests we have are for contacts and joints. VBD already covers soft bodies. AVBD makes no changes to that.
 > -Cem
 
-### [Previous velocity discrepency](https://github.com/savant117/avbd-demo2d/issues/4)
+### [Previous velocity definition](https://github.com/savant117/avbd-demo2d/issues/4)
 
 > [!NOTE]
 > I noticed this while looking into Vellum. Vellum uses 4 variables to track the previous 2 values of position and velocity:
