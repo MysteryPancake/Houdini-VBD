@@ -59,15 +59,12 @@ Ignoring collisions, VBD is really just 3 steps. These steps are nearly identica
 
 ### 1. Integrate the positions
 
-Add the velocity to the position (same as XPBD). VBD has a few methods of doing this, but they all give similar results.
-
-I included first and second-order Euler integration (Vellum style), with a flag to enable adaptive first-order integration as seen in VBD.
+Add the velocity to the position (same as XPBD). VBD uses a warmstarting strategy to scale the gravity term below.
 
 ```c
-// First-order Euler integration
+// First-order integration
 v@pprevious = v@P;
-v@v += gravity * f@TimeInc;
-v@P += v@v * f@TimeInc;
+v@P += v@v * f@TimeInc * v@gravity * f@TimeInc * f@TimeInc;
 ```
 
 | [OpenCL version](./ocl/forwardStep.cl) | [VEX version (outdated)](./vex/forwardStep.c) |
@@ -109,10 +106,10 @@ v@P += force * invert(hessian); // Reduce the variational energy of the system
 
 Update the velocities based on the change in position (same as XPBD). TinyVBD only included first-order velocities.
 
-I included first and second-order Euler velocities (Vellum style).
+I included first and second-order velocities (Vellum style).
 
 ```c
-// First-order Euler velocities
+// First-order velocities
 v@v = (v@P - v@pprevious) / f@TimeInc;
 ```
 
