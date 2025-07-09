@@ -6,7 +6,9 @@ Early WIP of Vertex Block Descent in Houdini. It runs natively without plugins, 
 
 There's an OpenCL version for performance, and a VEX version for debugging. Both are included in the HIP files.
 
-Currently it has everything from [TinyVBD](https://github.com/AnkaChan/TinyVBD) and some bits from [AVBD](https://graphics.cs.utah.edu/research/projects/avbd/).
+I stole everything from [TinyVBD](https://github.com/AnkaChan/TinyVBD), some bits from [AVBD](https://github.com/savant117/avbd-demo2d), [Gaia](https://github.com/AnkaChan/Gaia) and some ideas from the papers.
+
+Thanks to Anka He Chen and Chris Giles for making these open source with permissive licenses!
 
 | [Download the HIP file!](../../releases/latest) |
 | --- |
@@ -15,7 +17,7 @@ Currently it has everything from [TinyVBD](https://github.com/AnkaChan/TinyVBD) 
 - [x] Steal from [TinyVBD](https://github.com/AnkaChan/TinyVBD)
   - [x] [Mass-spring/StVK energy definition](https://github.com/AnkaChan/TinyVBD/blob/main/main.cpp#L381)
   - [x] [Accelerated convergence method (section 3.8)](https://graphics.cs.utah.edu/research/projects/vbd/vbd-siggraph2024.pdf)
-- [ ] Steal from [full VBD](https://github.com/AnkaChan/Gaia)
+- [ ] Steal from [Gaia](https://github.com/AnkaChan/Gaia)
   - [ ] [Neo-hookean energy definition](https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_NeoHookean.cpp), likely more stable
   - [x] Damping
   - [ ] Self collisions
@@ -49,7 +51,7 @@ Here's a quick comparison between VBD and XPBD:
 
 The most important part of VBD is the energy definition, but no one seems to agree on this.
 
-I've seen many different energy definitions, including mass-spring (used by [TinyVBD](https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_MassSpring.cpp) and [AVBD](https://github.com/savant117/avbd-demo2d/blob/main/source/spring.cpp#L40), but [removed from full VBD](https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_MassSpring.cpp)) and neo-hookean (used by [full VBD](https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_NeoHookean.cpp)).
+I've seen many different energy definitions, including mass-spring (used by [TinyVBD](https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_MassSpring.cpp) and [AVBD](https://github.com/savant117/avbd-demo2d/blob/main/source/spring.cpp#L40), but [removed from Gaia](https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_MassSpring.cpp)) and neo-hookean (used by [Gaia](https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_NeoHookean.cpp)).
 
 Currently only mass-spring energy is supported, but neo-hookean is coming soon.
 
