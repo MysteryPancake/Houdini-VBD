@@ -4,11 +4,12 @@
 #define MASS_SPRING 10827462
 #define NEO_HOOKEAN 1206786922
 
-// Slightly faster but memory unsafe
-#define entriesAt(_arr_, _idx_) (_arr_##_index[_idx_+1] - _arr_##_index[_idx_])
-#define compAt(_arr_, _idx_, _compidx_) _arr_[_arr_##_index[_idx_] + _compidx_]
-//#define entriesAt(_arr_, _idx_) ((_idx_ >= 0 && _idx_ < _arr_##_length) ? (_arr_##_index[_idx_+1] - _arr_##_index[_idx_]) : 0)
-//#define compAt(_arr_, _idx_, _compidx_) ((_idx_ >= 0 && _idx_ < _arr_##_length && _compidx_ >= 0 && _compidx_ < entriesAt(_arr_, _idx_)) ? _arr_[_arr_##_index[_idx_] + _compidx_] : 0)
+// Faster but memory unsafe
+#define entriesAt_unsafe(_arr_, _idx_) (_arr_##_index[_idx_+1] - _arr_##_index[_idx_])
+#define compAt_unsafe(_arr_, _idx_, _compidx_) _arr_[_arr_##_index[_idx_] + _compidx_]
+
+#define entriesAt(_arr_, _idx_) ((_idx_ >= 0 && _idx_ < _arr_##_length) ? (_arr_##_index[_idx_+1] - _arr_##_index[_idx_]) : 0)
+#define compAt(_arr_, _idx_, _compidx_) ((_idx_ >= 0 && _idx_ < _arr_##_length && _compidx_ >= 0 && _compidx_ < entriesAt_unsafe(_arr_, _idx_)) ? _arr_[_arr_##_index[_idx_] + _compidx_] : 0)
 
 // f * invert(h) using LDLT decomposition
 // From https://github.com/savant117/avbd-demo2d/blob/main/source/maths.h#L323
@@ -126,37 +127,38 @@ static inline void accumulateMaterialForceAndHessian_MassSpring(
     fpreal3 *force,
     mat3 hessian,
     const int idx,
-    const int prim,
+    const int primId,
     global int *_bound_primpoints,
     global int *_bound_primpoints_index,
+    const int _bound_primpoints_length,
     global fpreal *_bound_P,
     global fpreal* _bound_stiffness,
     global fpreal *_bound_restlength)
 {
     // Get the edge's first 2 points, assuming one point is us and the other isn't
-    int pt0 = compAt(_bound_primpoints, prim, 0);
-    int pt1 = compAt(_bound_primpoints, prim, 1);
+    int pt0 = compAt(_bound_primpoints, primId, 0);
+    int pt1 = compAt(_bound_primpoints, primId, 1);
     fpreal3 p0 = vload3(pt0, _bound_P);
     fpreal3 p1 = vload3(pt1, _bound_P);
     
-    /// Evaluate the hessian for the mass-spring energy definition
-    // From https://github.com/AnkaChan/TinyVBD/blob/main/main.cpp#L381
     fpreal3 diff = p0 - p1;
     fpreal l = length(diff);
-    fpreal l0 = _bound_restlength[prim];
-    fpreal stiffness = _bound_stiffness[prim] * 10; // VBD is around 10x less stiff than Vellum
+    fpreal l0 = _bound_restlength[primId];
+    fpreal stiffness = _bound_stiffness[primId] * 10; // VBD is around 10x less stiff than Vellum
     fpreal lengthScale = l0 / l;
     fpreal l2 = l * l;
     
-    mat3 h;
-    h[0] = stiffness * ((fpreal3)(1.0f, 0.0f, 0.0f) - lengthScale * ((fpreal3)(1.0f, 0.0f, 0.0f) - (diff * diff.x) / l2));
-    h[1] = stiffness * ((fpreal3)(0.0f, 1.0f, 0.0f) - lengthScale * ((fpreal3)(0.0f, 1.0f, 0.0f) - (diff * diff.y) / l2));
-    h[2] = stiffness * ((fpreal3)(0.0f, 0.0f, 1.0f) - lengthScale * ((fpreal3)(0.0f, 0.0f, 1.0f) - (diff * diff.z) / l2));
+    /// Hessian for the mass-spring energy definition
+    // From https://github.com/AnkaChan/TinyVBD/blob/main/main.cpp#L381
+    mat3 tmpHessian;
+    tmpHessian[0] = stiffness * ((fpreal3)(1.0f, 0.0f, 0.0f) - lengthScale * ((fpreal3)(1.0f, 0.0f, 0.0f) - (diff * diff.x) / l2));
+    tmpHessian[1] = stiffness * ((fpreal3)(0.0f, 1.0f, 0.0f) - lengthScale * ((fpreal3)(0.0f, 1.0f, 0.0f) - (diff * diff.y) / l2));
+    tmpHessian[2] = stiffness * ((fpreal3)(0.0f, 0.0f, 1.0f) - lengthScale * ((fpreal3)(0.0f, 0.0f, 1.0f) - (diff * diff.z) / l2));
 
     // Diagonal PSD approximation from AVBD greatly improves the stability
-    mat3 approx;
-    psdApproximation(h, approx);
-    mat3add(hessian, approx, hessian);
+    mat3 approxHessian;
+    psdApproximation(tmpHessian, approxHessian);
+    mat3add(hessian, approxHessian, hessian);
     
     // Force for the mass-spring energy definition
     (*force) += (stiffness * (l0 - l) / l) * diff * (pt0 == idx ? 1 : -1);
@@ -183,7 +185,7 @@ static inline void accumulateDampingForceAndHessian(
 // I stole the workgroup span code from Vellum (pbd_constraints.cl)
 // It ensures stuff runs properly regardless how the workgroups are split
 // Check the "Use Single Workgroup" setting in the Options tab to see what it does
-kernel void solveConstraintsVBD(
+kernel void solveConstraints(
 #ifdef SINGLE_WORKGROUP
 #ifdef SINGLE_WORKGROUP_SPANS
     int startcolor,
@@ -285,21 +287,17 @@ kernel void solveConstraintsVBD(
         mat3copy(hessian, tmpHessian);
     }
     
-    // For each edge connected to the current point
-    int len = entriesAt(_bound_pointprims, idx);
-    for (int con = 0; con < len; ++con)
+    // Solve each constraint connected to the current point
+    int numConstraints = entriesAt(_bound_pointprims, idx);
+    for (int constraintId = 0; constraintId < numConstraints; ++constraintId)
     {
-        // Get the constraint associated with this edge
-        int prim = compAt(_bound_pointprims, idx, con);
+        int primId = compAt(_bound_pointprims, idx, constraintId);
+        int constraintType = _bound_type[primId];
         
-        // Get the type of the constraint
-        int type = _bound_type[prim];
-        
-        // Include influence from spring constraints, for mass-spring energy
-        if (type == MASS_SPRING)
+        if (constraintType == MASS_SPRING)
         {
-            accumulateMaterialForceAndHessian_MassSpring(&force, hessian, idx, prim,
-                _bound_primpoints, _bound_primpoints_index,
+            accumulateMaterialForceAndHessian_MassSpring(&force, hessian, idx, primId,
+                _bound_primpoints, _bound_primpoints_index, _bound_primpoints_length,
                 _bound_P, _bound_stiffness, _bound_restlength);
         }
     }
