@@ -95,8 +95,8 @@ matrix3 hessian = 0;
 accumulateInertiaForceAndHessian(force, hessian); // Influences due to mass and inertia
 accumulateMaterialForceAndHessian(force, hessian); // Influences due to constraints (eg mass-spring or neo-hookean)
 accumulateDampingForceAndHessian(force, hessian); // Influences due to damping
-accumlateBoundaryForceAndHessian(force, hessian); // Influences due to boundaries (eg floor planes)
-accumlateCollisionForceAndHessian(force, hessian); // Influences due to collisions
+accumulateBoundaryForceAndHessian(force, hessian); // Influences due to boundaries (eg floor planes)
+accumulateCollisionForceAndHessian(force, hessian); // Influences due to collisions
 
 v@P += force * invert(hessian); // Reduce the variational energy of the system
 ```
