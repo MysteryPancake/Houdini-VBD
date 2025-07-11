@@ -15,7 +15,7 @@ Thanks to Anka He Chen and Chris Giles for making these open source with permiss
 
 ## Todo
 - [x] Steal from [TinyVBD](https://github.com/AnkaChan/TinyVBD)
-  - [x] [Mass-spring/StVK energy definition](https://github.com/AnkaChan/TinyVBD/blob/main/main.cpp#L381)
+  - [x] [Mass-spring energy definition](https://github.com/AnkaChan/TinyVBD/blob/main/main.cpp#L381)
   - [x] [Accelerated convergence method (section 3.8)](https://graphics.cs.utah.edu/research/projects/vbd/vbd-siggraph2024.pdf)
 - [ ] Steal from [Gaia](https://github.com/AnkaChan/Gaia)
   - [ ] [Neo-hookean energy definition](https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_NeoHookean.cpp), likely more stable
@@ -23,6 +23,8 @@ Thanks to Anka He Chen and Chris Giles for making these open source with permiss
   - [ ] Self collisions
   - [ ] External collisions
   - [ ] Friction
+- [ ] Steal from [NVIDIA Warp](https://github.com/NVIDIA/warp)
+  - [ ] [StVK energy definition](https://github.com/NVIDIA/warp/blob/main/warp/sim/integrator_vbd.py)
 - [ ] Steal from [AVBD](https://graphics.cs.utah.edu/research/projects/avbd/)
   - [x] [LDLT decomposition](https://graphics.cs.utah.edu/research/projects/avbd/Augmented_VBD-SIGGRAPH25.pdf) to improve stability
   - [ ] [Hard constraints](https://graphics.cs.utah.edu/research/projects/avbd/Augmented_VBD-SIGGRAPH25.pdf)
