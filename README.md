@@ -104,7 +104,7 @@ accumulateCollisionForceAndHessian(force, hessian); // Influences due to collisi
 v@P += force * invert(hessian); // Reduce the variational energy of the system
 ```
 
-| [OpenCL version](./ocl/solveConstraintsVBD.cl) | [VEX version (outdated)](./vex/solveConstraintsVBD.c) |
+| [OpenCL version](./ocl/solveConstraints.cl) | [VEX version (outdated)](./vex/solveConstraints.c) |
 | --- | --- |
 
 ### 3. Update the velocities
