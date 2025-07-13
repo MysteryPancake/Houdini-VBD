@@ -109,8 +109,8 @@ static inline void accumulateInertiaForceAndHessian(
     hessian[2] += (fpreal3)(0.0f, 0.0f, md);
 }
 
-// Diagonal PSD approximation from AVBD paper, greatly improves stability
-static inline void psdApproximation(const mat3 in, mat3 out)
+// Symmetric positive definite approximation of the hessian, greatly improves stability
+static inline void spdApproximation(const mat3 in, mat3 out)
 {
     mat3zero(out);
     for (int col = 0; col < 3; ++col)
@@ -159,11 +159,11 @@ static inline void accumulateMaterialForceAndHessian_MassSpring(
     tmp_hessian[1] = stiffness * (y - length_ratio * (y - (diff * diff.y) / length2));
     tmp_hessian[2] = stiffness * (z - length_ratio * (z - (diff * diff.z) / length2));
     
-    // Diagonal PSD approximation from AVBD greatly improves the stability
+    // Diagonal SPD approximation from AVBD greatly improves stability
     if (improve_stability)
     {
         mat3 approx_hessian;
-        psdApproximation(tmp_hessian, approx_hessian);
+        spdApproximation(tmp_hessian, approx_hessian);
         mat3add(hessian, approx_hessian, hessian);
     }
     else
