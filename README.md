@@ -20,15 +20,15 @@ Thanks to Anka He Chen and Chris Giles for making these open source with permiss
 - [ ] Steal from [Gaia](https://github.com/AnkaChan/Gaia)
   - [ ] [Neo-hookean energy definition](https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_NeoHookean.cpp), likely more stable
   - [x] Damping
+  - [x] Boundary collisions
   - [ ] Self collisions
   - [ ] External collisions
-  - [ ] Friction
+  - [x] Friction
 - [ ] Steal from [NVIDIA Warp](https://github.com/NVIDIA/warp)
   - [ ] [StVK energy definition](https://github.com/NVIDIA/warp/blob/main/warp/sim/integrator_vbd.py)
 - [ ] Steal from [AVBD](https://graphics.cs.utah.edu/research/projects/avbd/)
   - [x] [LDLT decomposition](https://graphics.cs.utah.edu/research/projects/avbd/Augmented_VBD-SIGGRAPH25.pdf) to improve stability
   - [ ] [Hard constraints](https://graphics.cs.utah.edu/research/projects/avbd/Augmented_VBD-SIGGRAPH25.pdf)
-  - [ ] All other improvements
 - [ ] Touch grass
 
 ## What's Vertex Block Descent?
