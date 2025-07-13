@@ -9,7 +9,6 @@
 #bind point &vlast fpreal3
 #bind point &inertia fpreal3
 #bind point mass fpreal val=1
-#bind point &plastiter fpreal3
 #bind point &omega fpreal val=1
 
 @KERNEL
@@ -36,7 +35,6 @@
     }
     
     @P.set(@inertia);
-    @plastiter.set(@P);
     
     // Used only when accelerated convergence is enabled
     @omega.set(1);
