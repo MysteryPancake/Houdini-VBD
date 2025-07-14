@@ -12,6 +12,31 @@
 #define entriesAt(_arr_, _idx_) ((_idx_ >= 0 && _idx_ < _arr_##_length) ? (_arr_##_index[_idx_+1] - _arr_##_index[_idx_]) : 0)
 #define compAt(_arr_, _idx_, _compidx_) ((_idx_ >= 0 && _idx_ < _arr_##_length && _compidx_ >= 0 && _compidx_ < entriesAt_unsafe(_arr_, _idx_)) ? _arr_[_arr_##_index[_idx_] + _compidx_] : 0)
 
+static fpreal3 mat32vecmul(const mat32 a, const fpreal2 b)
+{
+    return (fpreal3)(dot(a[0], b), dot(a[1], b), dot(a[2], b));
+}
+
+static fpreal2 mat32Tvecmul(const mat32 a, const fpreal3 b)
+{
+    return (fpreal2)(a[0][0] * b.x + a[1][0] * b.y + a[2][0] * b.z,
+                     a[0][1] * b.x + a[1][1] * b.y + a[2][1] * b.z);
+}
+
+// From https://graphics.pixar.com/library/OrthonormalB/paper.pdf
+void buildOrthonormalBasis(const fpreal3 n, mat32 out)
+{
+    const fpreal sign = copysign(1.0f, n.z);
+    const fpreal a = -1.0f / (sign + n.z);
+    const fpreal b = n.x * n.y * a;
+    out[0][0] = 1.0f + sign * n.x * n.x * a;
+    out[1][0] = sign * b;
+    out[2][0] = -sign * n.x;
+    out[0][1] = b;
+    out[1][1] = sign + n.y * n.y * a;
+    out[2][1] = -n.y;
+}
+
 // f * invert(h) using LDLT decomposition
 // From https://github.com/savant117/avbd-demo2d/blob/main/source/maths.h#L323
 static inline fpreal3 solveLDLT(
@@ -194,17 +219,6 @@ static inline void accumulateDampingForceAndHessian(
     mat3add(hessian, damping_hessian, hessian);
 }
 
-static fpreal3 mat32Tvecmul(const mat32 a, const fpreal2 b)
-{
-    return (fpreal3)(dot(a[0], b), dot(a[1], b), dot(a[2], b));
-}
-
-static fpreal2 mat32vec2mul(const mat32 a, const fpreal3 b)
-{
-    return (fpreal2)(a[0][0] * b.x + a[1][0] * b.y + a[2][0] * b.z,
-                     a[0][1] * b.x + a[1][1] * b.y + a[2][1] * b.z);
-}
-
 // IPC friction
 // From https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_GeneralCompute.h#L10
 // Based on https://github.com/ipc-sim/ipc-toolkit/blob/main/src/ipc/friction/smooth_friction_mollifier.cpp
@@ -224,7 +238,7 @@ static inline void accumulateVertexFriction(
     const fpreal mu_lambda_eps = mu * lambda * f1_SF_over_x;
     
     // Force = -mu * lambda * f1_SF_over_x * T_3x2 * u_2x1
-    (*force) -= mu_lambda_eps * mat32Tvecmul(T, u);
+    (*force) -= mu_lambda_eps * mat32vecmul(T, u);
     
     // Compute T * (f1_SF_over_x * Mat2::Identity()) * T.transpose()
     // This results in some nice cancellations
@@ -244,28 +258,28 @@ static inline void accumulateBoundaryForceAndHessian(
     const fpreal3 P,
     const fpreal3 pprevious,
     const fpreal3 ground_pos,
+    const fpreal3 ground_normal,
     const fpreal stiffness,
     const fpreal friction,
     const fpreal epsilon)
 {
-    const fpreal lower_bound = ground_pos.y;
-    if (P.y >= lower_bound) return;
+    const fpreal penetration_depth = dot(ground_normal, P - ground_pos);
+    if (penetration_depth >= 0) return;
     
-    const fpreal penetration_depth = lower_bound - P.y;
-    const fpreal lambda = penetration_depth * stiffness;
+    const fpreal lambda = -penetration_depth * stiffness;
     (*force).y += lambda;
-    hessian[1][1] += stiffness;
+    mat3 tmp_hessian;
+    outerprod3(ground_normal, ground_normal, tmp_hessian);
+    mat3scale(tmp_hessian, tmp_hessian, stiffness);
+    mat3add(hessian, tmp_hessian, hessian);
     
-    if (friction > 0.0f)
-    {
-        const fpreal3 diff = P - pprevious;
-        mat32 T;
-        T[0] = (fpreal2)(0.0f, 1.0f);
-        T[1] = (fpreal2)(0.0f, 0.0f);
-        T[2] = (fpreal2)(1.0f, 0.0f);
-        const fpreal2 u = mat32vec2mul(T, diff);
-        accumulateVertexFriction(friction, lambda, T, u, epsilon, force, hessian);
-    }
+    // Apply friction
+    if (friction <= 0.0f) return;
+    mat32 T;
+    buildOrthonormalBasis(ground_normal, T);
+    const fpreal3 diff = P - pprevious;
+    const fpreal2 u = mat32Tvecmul(T, diff);
+    accumulateVertexFriction(friction, lambda, T, u, epsilon, force, hessian);
 }
 
 // I stole the workgroup span code from Vellum (pbd_constraints.cl)
@@ -321,7 +335,8 @@ kernel void solveConstraints(
     const fpreal3 ground_pos,
     const fpreal ground_stiffness,
     const fpreal ground_friction,
-    const fpreal friction_epsilon
+    const fpreal friction_epsilon,
+    const fpreal3 ground_normal
 )
 {
     // Like Vellum, everything here is based on timeinc
@@ -407,10 +422,10 @@ kernel void solveConstraints(
         accumulateDampingForceAndHessian(&force, hessian, (P - pprevious) / timeinc, timeinc, K, damping * timeinc);
     }
     
-    if (use_bounds)
+    if (use_bounds && ground_stiffness > 0.0f)
     {
         accumulateBoundaryForceAndHessian(
-            &force, hessian, P, pprevious, ground_pos,
+            &force, hessian, P, pprevious, ground_pos, normalize(ground_normal),
             ground_stiffness, ground_friction, friction_epsilon * timeinc);
     }
     
