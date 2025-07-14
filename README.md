@@ -2,7 +2,7 @@
 
 <img src="./images/demo.webp" width="300">
 
-Early WIP of Vertex Block Descent in Houdini. It runs natively without plugins, as god intended.
+WIP of Vertex Block Descent in Houdini. It runs natively without plugins, as god intended.
 
 There's an OpenCL version for performance, and a VEX version for debugging. Both are included in the HIP files.
 
@@ -82,7 +82,7 @@ The core idea of VBD is updating the position based on a force vector and a hess
 If the influences are correct, moving the position should reduce the variational energy of the system.
 
 > [!CAUTION]
-> **This MUST be run in workgroups based on graph coloring!**
+> **This should be run in workgroups based on graph coloring!**
 >
 > If points move while their neighbours access them (like if running in sequential order), it breaks the assumption used by VBD:
 > 
