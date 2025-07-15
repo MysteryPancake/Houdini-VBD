@@ -37,7 +37,7 @@ void buildOrthonormalBasis(const fpreal3 n, mat32 out)
     out[2][1] = -n.y;
 }
 
-// f * invert(h) using LDLT decomposition
+// force * invert(hessian) using LDLT decomposition
 // From https://github.com/savant117/avbd-demo2d/blob/main/source/maths.h#L323
 static inline fpreal3 solveLDLT(
     const fpreal3 force,
@@ -70,7 +70,7 @@ static inline fpreal3 solveLDLT(
     return x;
 }
 
-// out = f * invert(h) with a check similar to abs(det(h)) > epsilon
+// out = force * invert(hessian) with a check similar to absf(det3(hessian)) > epsilon
 // From https://github.com/AnkaChan/CuMatrix/blob/main/CuMatrix/MatrixOps/CuMatrix.h#L235
 static inline int solveDirect(
     const fpreal3 force,
@@ -78,9 +78,9 @@ static inline int solveDirect(
     fpreal3 *out,
     const fpreal epsilon)
 {
-    const fpreal s0 = hessian[0][0]; const fpreal s3 = hessian[1][0]; const fpreal s6 = hessian[2][0];
-    const fpreal s1 = hessian[0][1]; const fpreal s4 = hessian[1][1]; const fpreal s7 = hessian[2][1];
-    const fpreal s2 = hessian[0][2]; const fpreal s5 = hessian[1][2]; const fpreal s8 = hessian[2][2];
+    const fpreal s0 = hessian[0][0], s3 = hessian[1][0], s6 = hessian[2][0];
+    const fpreal s1 = hessian[0][1], s4 = hessian[1][1], s7 = hessian[2][1];
+    const fpreal s2 = hessian[0][2], s5 = hessian[1][2], s8 = hessian[2][2];
     
     const fpreal i0 = s8 * s4 - s5 * s7;
     const fpreal i1 = -(s8 * s3 - s5 * s6);
@@ -127,24 +127,28 @@ static inline void accumulateInertiaForceAndHessian(
     const fpreal3 inertia,
     const fpreal dt_sqr_reciprocal)
 {
-    (*force) += mass * (inertia - P) * dt_sqr_reciprocal;
     const fpreal md = mass * dt_sqr_reciprocal;
+    (*force) += (inertia - P) * md;
     hessian[0] += (fpreal3)(md, 0.0f, 0.0f);
     hessian[1] += (fpreal3)(0.0f, md, 0.0f);
     hessian[2] += (fpreal3)(0.0f, 0.0f, md);
 }
 
 // Symmetric positive definite approximation of the hessian, greatly improves stability
-static inline void spdApproximation(const mat3 in, mat3 out)
+static inline void spdApproximation(mat3 h)
 {
-    mat3zero(out);
-    for (int col = 0; col < 3; ++col)
-    {
-        const fpreal x = in[0][col];
-        const fpreal y = in[1][col];
-        const fpreal z = in[2][col];
-        out[col][col] = sqrt(x*x + y*y + z*z);
-    }
+    // Column norm in the diagonal
+    const fpreal x0 = h[0][0], y0 = h[1][0], z0 = h[2][0];
+    const fpreal x1 = h[0][1], y1 = h[1][1], z1 = h[2][1];
+    const fpreal x2 = h[0][2], y2 = h[1][2], z2 = h[2][2];
+    h[0][0] = sqrt(x0*x0 + y0*y0 + z0*z0);
+    h[1][1] = sqrt(x1*x1 + y1*y1 + z1*z1);
+    h[2][2] = sqrt(x2*x2 + y2*y2 + z2*z2);
+
+    // Wipe everything else
+    h[0][1] = 0.0f; h[0][2] = 0.0f;
+    h[1][0] = 0.0f; h[1][2] = 0.0f;
+    h[2][0] = 0.0f; h[2][1] = 0.0f;
 }
 
 // Include influence from spring constraints, for mass-spring energy
@@ -161,7 +165,7 @@ static inline void accumulateMaterialForceAndHessian_MassSpring(
     global fpreal *_bound_restlength,
     const int improve_stability)
 {
-    // Get the edge's first 2 points, assuming one point is us and the other isn't
+    // Get the edge's first 2 points, assuming one point is us
     const int pt0 = compAt(_bound_primpoints, prim_id, 0);
     const int pt1 = compAt(_bound_primpoints, prim_id, 1);
     const fpreal3 p0 = vload3(pt0, _bound_P);
@@ -170,31 +174,26 @@ static inline void accumulateMaterialForceAndHessian_MassSpring(
     const fpreal3 diff = p0 - p1;
     const fpreal length_current = length(diff);
     const fpreal length_target = _bound_restlength[prim_id];
-    const fpreal stiffness = _bound_stiffness[prim_id] * 10; // VBD is about 10x less stiff than Vellum
     const fpreal length_ratio = length_target / length_current;
     const fpreal length2 = length_current * length_current;
     
-    // Hessian for the mass-spring energy definition, inlined for optimization
+    // VBD is about 10x less stiff than Vellum
+    const fpreal stiffness = _bound_stiffness[prim_id] * 10.0f;
+    
+    // Hessian for the mass-spring energy definition, inlined for speed
     // From https://github.com/AnkaChan/TinyVBD/blob/main/main.cpp#L381
-    mat3 tmp_hessian;
-    const fpreal3 x = (fpreal3)(1.0f, 0.0f, 0.0f);
-    const fpreal3 y = (fpreal3)(0.0f, 1.0f, 0.0f);
-    const fpreal3 z = (fpreal3)(0.0f, 0.0f, 1.0f);
-    tmp_hessian[0] = stiffness * (x - length_ratio * (x - (diff * diff.x) / length2));
-    tmp_hessian[1] = stiffness * (y - length_ratio * (y - (diff * diff.y) / length2));
-    tmp_hessian[2] = stiffness * (z - length_ratio * (z - (diff * diff.z) / length2));
+    mat3 ms_hessian;
+    const fpreal3 x_ident = (fpreal3)(1.0f, 0.0f, 0.0f);
+    const fpreal3 y_ident = (fpreal3)(0.0f, 1.0f, 0.0f);
+    const fpreal3 z_ident = (fpreal3)(0.0f, 0.0f, 1.0f);
+    ms_hessian[0] = stiffness * (x_ident - length_ratio * (x_ident - (diff * diff.x) / length2));
+    ms_hessian[1] = stiffness * (y_ident - length_ratio * (y_ident - (diff * diff.y) / length2));
+    ms_hessian[2] = stiffness * (z_ident - length_ratio * (z_ident - (diff * diff.z) / length2));
     
     // Diagonal SPD approximation from AVBD greatly improves stability
-    if (improve_stability)
-    {
-        mat3 approx_hessian;
-        spdApproximation(tmp_hessian, approx_hessian);
-        mat3add(hessian, approx_hessian, hessian);
-    }
-    else
-    {
-        mat3add(hessian, tmp_hessian, hessian);
-    }
+    if (improve_stability) spdApproximation(ms_hessian);
+    
+    mat3add(hessian, ms_hessian, hessian);
     
     // Force for the mass-spring energy definition
     // From https://github.com/AnkaChan/TinyVBD/blob/main/main.cpp#L384-L391
@@ -219,7 +218,6 @@ static inline void accumulateDampingForceAndHessian(
     mat3add(hessian, damping_hessian, hessian);
 }
 
-// IPC friction
 // From https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_GeneralCompute.h#L10
 // Based on https://github.com/ipc-sim/ipc-toolkit/blob/main/src/ipc/friction/smooth_friction_mollifier.cpp
 static inline void accumulateVertexFriction(
@@ -234,17 +232,19 @@ static inline void accumulateVertexFriction(
     const fpreal uNorm = length(u);
     if (uNorm <= 0.0f) return;
     
+    // IPC friction
     const fpreal f1_SF_over_x = uNorm > epsU ? 1.0f / uNorm : (-uNorm / epsU + 2.0f) / epsU;
     const fpreal mu_lambda_eps = mu * lambda * f1_SF_over_x;
-    
-    // Force = -mu * lambda * f1_SF_over_x * T_3x2 * u_2x1
     (*force) -= mu_lambda_eps * mat32vecmul(T, u);
     
-    // Compute T * (f1_SF_over_x * Mat2::Identity()) * T.transpose()
+    // Compute T * (f1_SF_over_x * mat2ident()) * transpose(T)
     // This results in some nice cancellations
-    for (int row = 0; row < 3; ++row) {
-        for (int col = 0; col < 3; ++col) {
-            for (int i = 0; i < 2; ++i) {
+    for (int row = 0; row < 3; ++row)
+    {
+        for (int col = 0; col < 3; ++col)
+        {
+            for (int i = 0; i < 2; ++i)
+            {
                 hessian[row][col] += T[row][i] * T[col][i] * mu_lambda_eps;
             }
         }
@@ -252,6 +252,7 @@ static inline void accumulateVertexFriction(
 }
 
 // From https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_GeneralCompute.h#L87
+// Improved by https://github.com/NVIDIA/warp/blob/main/warp/sim/integrator_vbd.py#L513
 static inline void accumulateBoundaryForceAndHessian(
     fpreal3 *force,
     mat3 hessian,
@@ -260,26 +261,39 @@ static inline void accumulateBoundaryForceAndHessian(
     const fpreal3 ground_pos,
     const fpreal3 ground_normal,
     const fpreal stiffness,
+    const fpreal damping,
     const fpreal friction,
-    const fpreal epsilon)
+    const fpreal epsU,
+    const fpreal timeinc)
 {
-    const fpreal penetration_depth = dot(ground_normal, P - ground_pos);
-    if (penetration_depth >= 0) return;
+    const fpreal penetration_depth = -dot(ground_normal, P - ground_pos);
+    if (penetration_depth <= 0.0f) return;
     
-    const fpreal lambda = -penetration_depth * stiffness;
-    (*force).y += lambda;
-    mat3 tmp_hessian;
-    outerprod3(ground_normal, ground_normal, tmp_hessian);
-    mat3scale(tmp_hessian, tmp_hessian, stiffness);
-    mat3add(hessian, tmp_hessian, hessian);
+    const fpreal3 diff = P - pprevious;
+    const fpreal ground_force_norm = penetration_depth * stiffness;
+    (*force) += ground_normal * ground_force_norm;
+    
+    mat3 ground_hessian;
+    outerprod3(ground_normal, ground_normal, ground_hessian);
+    mat3scale(ground_hessian, ground_hessian, stiffness);
+    
+    // Apply damping
+    if (dot(diff, ground_normal) < 0.0f)
+    {
+        mat3 damping_hessian;
+        mat3scale(damping_hessian, ground_hessian, damping / timeinc);
+        (*force) -= mat3vecmul(damping_hessian, diff);
+        mat3add(ground_hessian, damping_hessian, ground_hessian);
+    }
+    
+    mat3add(hessian, ground_hessian, hessian);
     
     // Apply friction
     if (friction <= 0.0f) return;
     mat32 T;
     buildOrthonormalBasis(ground_normal, T);
-    const fpreal3 diff = P - pprevious;
     const fpreal2 u = mat32Tvecmul(T, diff);
-    accumulateVertexFriction(friction, lambda, T, u, epsilon, force, hessian);
+    accumulateVertexFriction(friction, ground_force_norm, T, u, epsU * timeinc, force, hessian);
 }
 
 // I stole the workgroup span code from Vellum (pbd_constraints.cl)
@@ -336,7 +350,8 @@ kernel void solveConstraints(
     const fpreal ground_stiffness,
     const fpreal ground_friction,
     const fpreal friction_epsilon,
-    const fpreal3 ground_normal
+    const fpreal3 ground_normal,
+    const fpreal ground_damping
 )
 {
     // Like Vellum, everything here is based on timeinc
@@ -426,7 +441,7 @@ kernel void solveConstraints(
     {
         accumulateBoundaryForceAndHessian(
             &force, hessian, P, pprevious, ground_pos, normalize(ground_normal),
-            ground_stiffness, ground_friction, friction_epsilon * timeinc);
+            ground_stiffness, ground_damping, ground_friction, friction_epsilon, timeinc);
     }
     
     // The core of VBD is P += force * invert(hessian)
