@@ -15,18 +15,27 @@
 typedef fpreal fpreal9[9];
 typedef fpreal9 mat9[9];
 
-static fpreal3 mat32vecmul(const mat32 a, const fpreal2 b)
+// Prefixed in case these get added to matrix.h later
+static inline fpreal3 _mat32vecmul(const mat32 a, const fpreal2 b)
 {
     return (fpreal3)(dot(a[0], b), dot(a[1], b), dot(a[2], b));
 }
 
-static fpreal2 mat32Tvecmul(const mat32 a, const fpreal3 b)
+static inline fpreal2 _mat32Tvecmul(const mat32 a, const fpreal3 b)
 {
     return (fpreal2)(a[0][0] * b.x + a[1][0] * b.y + a[2][0] * b.z,
                      a[0][1] * b.x + a[1][1] * b.y + a[2][1] * b.z);
 }
 
-static void mat9outerprod(const fpreal9 a, const fpreal9 b, mat9 out)
+static inline void _mat3adddiag(mat3 mout, const mat3 m, const fpreal x)
+{
+    for (int i = 0; i < 3; ++i)
+    {
+        mout[i][i] = m[i][i] + x;
+    }
+}
+
+static inline void _mat9outerprod(const fpreal9 a, const fpreal9 b, mat9 out)
 {
     for (int row = 0; row < 9; ++row)
     {
@@ -37,7 +46,7 @@ static void mat9outerprod(const fpreal9 a, const fpreal9 b, mat9 out)
     }
 }
 
-static void mat9scale(mat9 mout, const mat9 m, const fpreal scale)
+static inline void _mat9scale(mat9 mout, const mat9 m, const fpreal scale)
 {
     for (int row = 0; row < 9; ++row)
     {
@@ -48,8 +57,16 @@ static void mat9scale(mat9 mout, const mat9 m, const fpreal scale)
     }
 }
 
+static inline void _mat9adddiag(mat9 mout, const mat9 m, const fpreal x)
+{
+    for (int i = 0; i < 9; ++i)
+    {
+        mout[i][i] = m[i][i] + x;
+    }
+}
+
 // From https://graphics.pixar.com/library/OrthonormalB/paper.pdf
-void buildOrthonormalBasis(const fpreal3 n, mat32 out)
+static inline void buildOrthonormalBasis(const fpreal3 n, mat32 out)
 {
     const fpreal sign = copysign(1.0f, n.z);
     const fpreal a = -1.0f / (sign + n.z);
@@ -154,9 +171,7 @@ static inline void accumulateInertiaForceAndHessian(
 {
     const fpreal md = mass * dt_sqr_reciprocal;
     (*force) += (inertia - P) * md;
-    hessian[0] += (fpreal3)(md, 0.0f, 0.0f);
-    hessian[1] += (fpreal3)(0.0f, md, 0.0f);
-    hessian[2] += (fpreal3)(0.0f, 0.0f, md);
+    _mat3adddiag(hessian, hessian, md);
 }
 
 // Symmetric positive definite approximation of the hessian, greatly improves stability
@@ -166,9 +181,9 @@ static inline void spdApproximation(mat3 h)
     const fpreal x0 = h[0][0], y0 = h[1][0], z0 = h[2][0];
     const fpreal x1 = h[0][1], y1 = h[1][1], z1 = h[2][1];
     const fpreal x2 = h[0][2], y2 = h[1][2], z2 = h[2][2];
-    h[0][0] = sqrt(x0*x0 + y0*y0 + z0*z0);
-    h[1][1] = sqrt(x1*x1 + y1*y1 + z1*z1);
-    h[2][2] = sqrt(x2*x2 + y2*y2 + z2*z2);
+    h[0][0] = sqrt(x0 * x0 + y0 * y0 + z0 * z0);
+    h[1][1] = sqrt(x1 * x1 + y1 * y1 + z1 * z1);
+    h[2][2] = sqrt(x2 * x2 + y2 * y2 + z2 * z2);
 
     // Wipe everything else
     h[0][1] = 0.0f; h[0][2] = 0.0f;
@@ -331,7 +346,7 @@ static inline void accumulateMaterialForceAndHessian_NeoHookean(
     };
 
     mat9 d2E_dF_dF;
-    mat9outerprod(ddetF_dF, ddetF_dF, d2E_dF_dF);
+    _mat9outerprod(ddetF_dF, ddetF_dF, d2E_dF_dF);
 
     const fpreal k = det3(F) - a;
     d2E_dF_dF[0][4] += k * F3_3;
@@ -376,20 +391,11 @@ static inline void accumulateMaterialForceAndHessian_NeoHookean(
     d2E_dF_dF[5][7] += k * -F1_1;
     d2E_dF_dF[7][5] += k * -F1_1;
     
-    mat9scale(d2E_dF_dF, d2E_dF_dF, lmbd);
-    
-    d2E_dF_dF[0][0] += miu;
-    d2E_dF_dF[1][1] += miu;
-    d2E_dF_dF[2][2] += miu;
-    d2E_dF_dF[3][3] += miu;
-    d2E_dF_dF[4][4] += miu;
-    d2E_dF_dF[5][5] += miu;
-    d2E_dF_dF[6][6] += miu;
-    d2E_dF_dF[7][7] += miu;
-    d2E_dF_dF[8][8] += miu;
+    _mat9scale(d2E_dF_dF, d2E_dF_dF, lmbd);
+    _mat9adddiag(d2E_dF_dF, d2E_dF_dF, miu);
 
     const fpreal restVolume = _bound_restlength[prim_id];
-    mat9scale(d2E_dF_dF, d2E_dF_dF, restVolume);
+    _mat9scale(d2E_dF_dF, d2E_dF_dF, restVolume);
 
     fpreal9 dE_dF;
     for (int row = 0; row < 3; ++row)
@@ -400,41 +406,31 @@ static inline void accumulateMaterialForceAndHessian_NeoHookean(
             dE_dF[i] = restVolume * (F[row][col] * miu + ddetF_dF[i] * lmbd * k);
         }
     }
-    
-    const fpreal DmInv1_1 = Dminv[0][0];
-    const fpreal DmInv2_1 = Dminv[1][0];
-    const fpreal DmInv3_1 = Dminv[2][0];
-    const fpreal DmInv1_2 = Dminv[0][1];
-    const fpreal DmInv2_2 = Dminv[1][1];
-    const fpreal DmInv3_2 = Dminv[2][1];
-    const fpreal DmInv1_3 = Dminv[0][2];
-    const fpreal DmInv2_3 = Dminv[1][2];
-    const fpreal DmInv3_3 = Dminv[2][2];
-    
+
     fpreal m1, m2, m3;
     if (idx == pt0)
     {
-        m1 = -DmInv1_1 - DmInv2_1 - DmInv3_1;
-        m2 = -DmInv1_2 - DmInv2_2 - DmInv3_2;
-        m3 = -DmInv1_3 - DmInv2_3 - DmInv3_3;
+        m1 = -Dminv[0][0] - Dminv[1][0] - Dminv[2][0];
+        m2 = -Dminv[0][1] - Dminv[1][1] - Dminv[2][1];
+        m3 = -Dminv[0][2] - Dminv[1][2] - Dminv[2][2];
     }
     else if (idx == pt1)
     {
-        m1 = DmInv1_1;
-        m2 = DmInv1_2;
-        m3 = DmInv1_3;
+        m1 = Dminv[0][0];
+        m2 = Dminv[0][1];
+        m3 = Dminv[0][2];
     } 
     else if (idx == pt2)
     {
-        m1 = DmInv2_1;
-        m2 = DmInv2_2;
-        m3 = DmInv2_3;
+        m1 = Dminv[1][0];
+        m2 = Dminv[1][1];
+        m3 = Dminv[1][2];
     }
     else
     {
-        m1 = DmInv3_1;
-        m2 = DmInv3_2;
-        m3 = DmInv3_3;
+        m1 = Dminv[2][0];
+        m2 = Dminv[2][1];
+        m3 = Dminv[2][2];
     }
 
     // Store the hessian here for damping
@@ -448,16 +444,11 @@ static inline void accumulateMaterialForceAndHessian_NeoHookean(
     {
         mat3 dampingH;
         mat3scale(dampingH, d2E_dxi_dxi, lmbd_damping);
-        fpreal tmp = (m1*m1 + m2*m2 + m3*m3) * miu * restVolume;
-        
-        d2E_dxi_dxi[0][0] += tmp;
-        d2E_dxi_dxi[1][1] += tmp;
-        d2E_dxi_dxi[2][2] += tmp;
+        fpreal tmp = (m1 * m1 + m2 * m2 + m3 * m3) * miu * restVolume;
+        _mat3adddiag(d2E_dxi_dxi, d2E_dxi_dxi, tmp);
         tmp *= miu_damping;
         
-        dampingH[0][0] += tmp;
-        dampingH[1][1] += tmp;
-        dampingH[2][2] += tmp;
+        _mat3adddiag(dampingH, dampingH, tmp);
         mat3scale(dampingH, dampingH, 1.0f / timeinc);
 
         (*force) -= mat3vecmul(dampingH, displacement);
@@ -502,7 +493,7 @@ static inline void accumulateVertexFriction(
     // IPC friction
     const fpreal f1_SF_over_x = uNorm > epsU ? 1.0f / uNorm : (-uNorm / epsU + 2.0f) / epsU;
     const fpreal mu_lambda_eps = mu * lambda * f1_SF_over_x;
-    (*force) -= mu_lambda_eps * mat32vecmul(T, u);
+    (*force) -= mu_lambda_eps * _mat32vecmul(T, u);
     
     // Compute T * (f1_SF_over_x * mat2ident()) * transpose(T)
     // This results in some nice cancellations
@@ -558,7 +549,7 @@ static inline void accumulateBoundaryForceAndHessian(
     if (friction <= 0.0f) return;
     mat32 T;
     buildOrthonormalBasis(ground_normal, T);
-    const fpreal2 u = mat32Tvecmul(T, displacement);
+    const fpreal2 u = _mat32Tvecmul(T, displacement);
     accumulateVertexFriction(friction, ground_force_norm, T, u, epsU * timeinc, force, hessian);
 }
 
