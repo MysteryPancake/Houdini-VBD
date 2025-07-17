@@ -1,9 +1,9 @@
 # Houdini Vertex Block Descent
 
-<img src="./images/demo.webp" width="300">
-
-| <img src="./images/massspring.png"> | <img src="./images/neohookean.png"> |
+| <img src="./images/demo.webp"> | <img src="./images/demo2.webp"> |
 | --- | --- |
+| <img src="./images/massspring.png"> | <img src="./images/neohookean.png"> |
+
 
 WIP of Vertex Block Descent in Houdini. It runs natively without plugins, as god intended.
 
