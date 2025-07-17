@@ -2,6 +2,9 @@
 
 <img src="./images/demo.webp" width="300">
 
+| <img src="./images/massspring.png"> | <img src="./images/neohookean.png"> |
+| --- | --- |
+
 WIP of Vertex Block Descent in Houdini. It runs natively without plugins, as god intended.
 
 There's an OpenCL version for performance, and a VEX version for debugging. Both are included in the HIP files.
