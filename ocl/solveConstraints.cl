@@ -12,6 +12,9 @@
 #define entriesAt(_arr_, _idx_) ((_idx_ >= 0 && _idx_ < _arr_##_length) ? (_arr_##_index[_idx_+1] - _arr_##_index[_idx_]) : 0)
 #define compAt(_arr_, _idx_, _compidx_) ((_idx_ >= 0 && _idx_ < _arr_##_length && _compidx_ >= 0 && _compidx_ < entriesAt_unsafe(_arr_, _idx_)) ? _arr_[_arr_##_index[_idx_] + _compidx_] : 0)
 
+typedef fpreal fpreal9[9];
+typedef fpreal9 mat9[9];
+
 static fpreal3 mat32vecmul(const mat32 a, const fpreal2 b)
 {
     return (fpreal3)(dot(a[0], b), dot(a[1], b), dot(a[2], b));
@@ -21,6 +24,28 @@ static fpreal2 mat32Tvecmul(const mat32 a, const fpreal3 b)
 {
     return (fpreal2)(a[0][0] * b.x + a[1][0] * b.y + a[2][0] * b.z,
                      a[0][1] * b.x + a[1][1] * b.y + a[2][1] * b.z);
+}
+
+static void mat9outerprod(const fpreal9 a, const fpreal9 b, mat9 out)
+{
+    for (int row = 0; row < 9; ++row)
+    {
+        for (int col = 0; col < 9; ++col)
+        {
+            out[row][col] = a[row] * b[col];
+        }
+    }
+}
+
+static void mat9scale(mat9 mout, const mat9 m, const fpreal scale)
+{
+    for (int row = 0; row < 9; ++row)
+    {
+        for (int col = 0; col < 9; ++col)
+        {
+            mout[row][col] = m[row][col] * scale;
+        }
+    }
 }
 
 // From https://graphics.pixar.com/library/OrthonormalB/paper.pdf
@@ -172,10 +197,10 @@ static inline void accumulateMaterialForceAndHessian_MassSpring(
     const fpreal3 p1 = vload3(pt1, _bound_P);
     
     const fpreal3 diff = p0 - p1;
-    const fpreal length_current = length(diff);
-    const fpreal length_target = _bound_restlength[prim_id];
-    const fpreal length_ratio = length_target / length_current;
-    const fpreal length2 = length_current * length_current;
+    const fpreal l = length(diff);
+    const fpreal l0 = _bound_restlength[prim_id];
+    const fpreal l_ratio = l0 / l;
+    const fpreal l2 = l * l;
     
     // VBD is about 10x less stiff than Vellum
     const fpreal stiffness = _bound_stiffness[prim_id] * 10.0f;
@@ -186,9 +211,9 @@ static inline void accumulateMaterialForceAndHessian_MassSpring(
     const fpreal3 x_ident = (fpreal3)(1.0f, 0.0f, 0.0f);
     const fpreal3 y_ident = (fpreal3)(0.0f, 1.0f, 0.0f);
     const fpreal3 z_ident = (fpreal3)(0.0f, 0.0f, 1.0f);
-    ms_hessian[0] = stiffness * (x_ident - length_ratio * (x_ident - (diff * diff.x) / length2));
-    ms_hessian[1] = stiffness * (y_ident - length_ratio * (y_ident - (diff * diff.y) / length2));
-    ms_hessian[2] = stiffness * (z_ident - length_ratio * (z_ident - (diff * diff.z) / length2));
+    ms_hessian[0] = stiffness * (x_ident - l_ratio * (x_ident - (diff * diff.x) / l2));
+    ms_hessian[1] = stiffness * (y_ident - l_ratio * (y_ident - (diff * diff.y) / l2));
+    ms_hessian[2] = stiffness * (z_ident - l_ratio * (z_ident - (diff * diff.z) / l2));
     
     // Diagonal SPD approximation from AVBD greatly improves stability
     if (improve_stability) spdApproximation(ms_hessian);
@@ -197,7 +222,249 @@ static inline void accumulateMaterialForceAndHessian_MassSpring(
     
     // Force for the mass-spring energy definition
     // From https://github.com/AnkaChan/TinyVBD/blob/main/main.cpp#L384-L391
-    (*force) += (stiffness * (length_target - length_current) / length_current) * diff * (pt0 == idx ? 1 : -1);
+    (*force) += (stiffness * (l0 - l) / l) * diff * (pt0 == idx ? 1 : -1);
+}
+
+// From https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_NeoHookean.cpp#L126
+static inline void assembleForceAndHessian_NeoHookean(
+    const fpreal9 dE_dF,
+    const mat9 d2E_dF,
+    const fpreal m1,
+    const fpreal m2,
+    const fpreal m3,
+    fpreal3 *force,
+    mat3 hessian)
+{
+    (*force).x -= dE_dF[0] * m1 + dE_dF[3] * m2 + dE_dF[6] * m3;
+    (*force).y -= dE_dF[1] * m1 + dE_dF[4] * m2 + dE_dF[7] * m3;
+    (*force).z -= dE_dF[2] * m1 + dE_dF[5] * m2 + dE_dF[8] * m3;
+    
+    mat9 HL;
+    for (int col = 0; col < 9; ++col)
+    {
+        HL[0][col] = d2E_dF[0][col] * m1 + d2E_dF[3][col] * m2 + d2E_dF[6][col] * m3;
+        HL[1][col] = d2E_dF[1][col] * m1 + d2E_dF[4][col] * m2 + d2E_dF[7][col] * m3;
+        HL[2][col] = d2E_dF[2][col] * m1 + d2E_dF[5][col] * m2 + d2E_dF[8][col] * m3;
+    }
+    
+    for (int row = 0; row < 3; ++row)
+    {
+        hessian[row][0] = HL[row][0] * m1 + HL[row][3] * m2 + HL[row][6] * m3;
+        hessian[row][1] = HL[row][1] * m1 + HL[row][4] * m2 + HL[row][7] * m3;
+        hessian[row][2] = HL[row][2] * m1 + HL[row][5] * m2 + HL[row][8] * m3;
+    }
+}
+
+static inline void accumulateMaterialForceAndHessian_NeoHookean(
+    fpreal3 *force,
+    mat3 hessian,
+    const int idx,
+    const int prim_id,
+    global int *_bound_primpoints,
+    global int *_bound_primpoints_index,
+    int _bound_primpoints_length,
+    global fpreal *_bound_P,
+    global fpreal *_bound_pprevious,
+    global fpreal *_bound_restlength,
+    global fpreal *_bound_restmatrix,
+    global fpreal *_bound_stiffness,
+    global fpreal *_bound_bendstiffness,
+    global fpreal *_bound_dampingratio,
+    global fpreal *_bound_benddampingratio,
+    const fpreal timeinc,
+    const fpreal3 displacement,
+    const int improve_stability)
+{
+    // Hydrostatic energy stiffness (volume stiffness)
+    const fpreal lmbd = _bound_stiffness[prim_id]; // 
+    const fpreal lmbd_damping = _bound_dampingratio[prim_id];
+    
+    // Deviatoric energy stiffness (shear stiffness)
+    const fpreal miu = _bound_bendstiffness[prim_id];
+    const fpreal miu_damping = _bound_benddampingratio[prim_id];
+    
+    const fpreal a = 1.0f + miu / lmbd;
+
+    const int pt0 = compAt(_bound_primpoints, prim_id, 0);
+    const int pt1 = compAt(_bound_primpoints, prim_id, 1);
+    const int pt2 = compAt(_bound_primpoints, prim_id, 2);
+    const int pt3 = compAt(_bound_primpoints, prim_id, 3);
+    
+    const fpreal3 p0 = vload3(pt0, _bound_P);
+    const fpreal3 p1 = vload3(pt1, _bound_P);
+    const fpreal3 p2 = vload3(pt2, _bound_P);
+    const fpreal3 p3 = vload3(pt3, _bound_P);
+
+    // Ds = current tet deform
+    mat3 Ds;
+    mat3fromcols(p1 - p0, p2 - p0, p3 - p0, Ds);
+    
+    // Dminv = tet rest deform inverse
+    mat3 Dminv;
+    mat3load(prim_id, _bound_restmatrix, Dminv);
+    
+    // F = Ds * Dm^-1 (force for tet)
+    mat3 F;
+    mat3mul(Ds, Dminv, F);
+    
+    // This is the wrong way around but works somehow
+    const fpreal F1_1 = F[0][0];
+    const fpreal F1_2 = F[0][1];
+    const fpreal F1_3 = F[0][2];
+    const fpreal F2_1 = F[1][0];
+    const fpreal F2_2 = F[1][1];
+    const fpreal F2_3 = F[1][2];
+    const fpreal F3_1 = F[2][0];
+    const fpreal F3_2 = F[2][1];
+    const fpreal F3_3 = F[2][2];
+    
+    const fpreal9 ddetF_dF = {
+        F2_2 * F3_3 - F2_3 * F3_2,
+        F1_3 * F3_2 - F1_2 * F3_3,
+        F1_2 * F2_3 - F1_3 * F2_2,
+        F2_3 * F3_1 - F2_1 * F3_3,
+        F1_1 * F3_3 - F1_3 * F3_1,
+        F1_3 * F2_1 - F1_1 * F2_3,
+        F2_1 * F3_2 - F2_2 * F3_1,
+        F1_2 * F3_1 - F1_1 * F3_2,
+        F1_1 * F2_2 - F1_2 * F2_1
+    };
+
+    mat9 d2E_dF_dF;
+    mat9outerprod(ddetF_dF, ddetF_dF, d2E_dF_dF);
+
+    const fpreal k = det3(F) - a;
+    d2E_dF_dF[0][4] += k * F3_3;
+    d2E_dF_dF[4][0] += k * F3_3;
+    d2E_dF_dF[0][5] += k * -F2_3;
+    d2E_dF_dF[5][0] += k * -F2_3;
+    d2E_dF_dF[0][7] += k * -F3_2;
+    d2E_dF_dF[7][0] += k * -F3_2;
+    d2E_dF_dF[0][8] += k * F2_2;
+    d2E_dF_dF[8][0] += k * F2_2;
+    
+    d2E_dF_dF[1][3] += k * -F3_3;
+    d2E_dF_dF[3][1] += k * -F3_3;
+    d2E_dF_dF[1][5] += k * F1_3;
+    d2E_dF_dF[5][1] += k * F1_3;
+    d2E_dF_dF[1][6] += k * F3_2;
+    d2E_dF_dF[6][1] += k * F3_2;
+    d2E_dF_dF[1][8] += k * -F1_2;
+    d2E_dF_dF[8][1] += k * -F1_2;
+    
+    d2E_dF_dF[2][3] += k * F2_3;
+    d2E_dF_dF[3][2] += k * F2_3;
+    d2E_dF_dF[2][4] += k * -F1_3;
+    d2E_dF_dF[4][2] += k * -F1_3;
+    d2E_dF_dF[2][6] += k * -F2_2;
+    d2E_dF_dF[6][2] += k * -F2_2;
+    d2E_dF_dF[2][7] += k * F1_2;
+    d2E_dF_dF[7][2] += k * F1_2;
+    
+    d2E_dF_dF[3][7] += k * F3_1;
+    d2E_dF_dF[7][3] += k * F3_1;
+    d2E_dF_dF[3][8] += k * -F2_1;
+    d2E_dF_dF[8][3] += k * -F2_1;
+    
+    d2E_dF_dF[4][6] += k * -F3_1;
+    d2E_dF_dF[6][4] += k * -F3_1;
+    d2E_dF_dF[4][8] += k * F1_1;
+    d2E_dF_dF[8][4] += k * F1_1;
+    
+    d2E_dF_dF[5][6] += k * F2_1;
+    d2E_dF_dF[6][5] += k * F2_1;
+    d2E_dF_dF[5][7] += k * -F1_1;
+    d2E_dF_dF[7][5] += k * -F1_1;
+    
+    mat9scale(d2E_dF_dF, d2E_dF_dF, lmbd);
+    
+    d2E_dF_dF[0][0] += miu;
+    d2E_dF_dF[1][1] += miu;
+    d2E_dF_dF[2][2] += miu;
+    d2E_dF_dF[3][3] += miu;
+    d2E_dF_dF[4][4] += miu;
+    d2E_dF_dF[5][5] += miu;
+    d2E_dF_dF[6][6] += miu;
+    d2E_dF_dF[7][7] += miu;
+    d2E_dF_dF[8][8] += miu;
+
+    const fpreal restVolume = _bound_restlength[prim_id];
+    mat9scale(d2E_dF_dF, d2E_dF_dF, restVolume);
+
+    fpreal9 dE_dF;
+    for (int row = 0; row < 3; ++row)
+    {
+        for (int col = 0; col < 3; ++col)
+        {
+            const int i = col * 3 + row;
+            dE_dF[i] = restVolume * (F[row][col] * miu + ddetF_dF[i] * lmbd * k);
+        }
+    }
+    
+    const fpreal DmInv1_1 = Dminv[0][0];
+    const fpreal DmInv2_1 = Dminv[1][0];
+    const fpreal DmInv3_1 = Dminv[2][0];
+    const fpreal DmInv1_2 = Dminv[0][1];
+    const fpreal DmInv2_2 = Dminv[1][1];
+    const fpreal DmInv3_2 = Dminv[2][1];
+    const fpreal DmInv1_3 = Dminv[0][2];
+    const fpreal DmInv2_3 = Dminv[1][2];
+    const fpreal DmInv3_3 = Dminv[2][2];
+    
+    fpreal m1, m2, m3;
+    if (idx == pt0)
+    {
+        m1 = -DmInv1_1 - DmInv2_1 - DmInv3_1;
+        m2 = -DmInv1_2 - DmInv2_2 - DmInv3_2;
+        m3 = -DmInv1_3 - DmInv2_3 - DmInv3_3;
+    }
+    else if (idx == pt1)
+    {
+        m1 = DmInv1_1;
+        m2 = DmInv1_2;
+        m3 = DmInv1_3;
+    } 
+    else if (idx == pt2)
+    {
+        m1 = DmInv2_1;
+        m2 = DmInv2_2;
+        m3 = DmInv2_3;
+    }
+    else
+    {
+        m1 = DmInv3_1;
+        m2 = DmInv3_2;
+        m3 = DmInv3_3;
+    }
+
+    // Store the hessian here for damping
+    mat3 d2E_dxi_dxi;
+    assembleForceAndHessian_NeoHookean(dE_dF, d2E_dF_dF, m1, m2, m3, force, d2E_dxi_dxi);
+    
+    // Diagonal SPD approximation from AVBD greatly improves stability
+    if (improve_stability) spdApproximation(d2E_dxi_dxi);
+    
+    if (lmbd_damping > 0.0f || miu_damping > 0.0f)
+    {
+        mat3 dampingH;
+        mat3scale(dampingH, d2E_dxi_dxi, lmbd_damping);
+        fpreal tmp = (m1*m1 + m2*m2 + m3*m3) * miu * restVolume;
+        
+        d2E_dxi_dxi[0][0] += tmp;
+        d2E_dxi_dxi[1][1] += tmp;
+        d2E_dxi_dxi[2][2] += tmp;
+        tmp *= miu_damping;
+        
+        dampingH[0][0] += tmp;
+        dampingH[1][1] += tmp;
+        dampingH[2][2] += tmp;
+        mat3scale(dampingH, dampingH, 1.0f / timeinc);
+
+        (*force) -= mat3vecmul(dampingH, displacement);
+        mat3add(d2E_dxi_dxi, dampingH, d2E_dxi_dxi);
+    }
+    
+    mat3add(hessian, d2E_dxi_dxi, hessian);
 }
 
 // From https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBDPhysics.cpp#L2786
@@ -257,7 +524,7 @@ static inline void accumulateBoundaryForceAndHessian(
     fpreal3 *force,
     mat3 hessian,
     const fpreal3 P,
-    const fpreal3 pprevious,
+    const fpreal3 displacement,
     const fpreal3 ground_pos,
     const fpreal3 ground_normal,
     const fpreal stiffness,
@@ -269,7 +536,6 @@ static inline void accumulateBoundaryForceAndHessian(
     const fpreal penetration_depth = -dot(ground_normal, P - ground_pos);
     if (penetration_depth <= 0.0f) return;
     
-    const fpreal3 diff = P - pprevious;
     const fpreal ground_force_norm = penetration_depth * stiffness;
     (*force) += ground_normal * ground_force_norm;
     
@@ -278,11 +544,11 @@ static inline void accumulateBoundaryForceAndHessian(
     mat3scale(ground_hessian, ground_hessian, stiffness);
     
     // Apply damping
-    if (dot(diff, ground_normal) < 0.0f)
+    if (dot(displacement, ground_normal) < 0.0f)
     {
         mat3 damping_hessian;
         mat3scale(damping_hessian, ground_hessian, damping / timeinc);
-        (*force) -= mat3vecmul(damping_hessian, diff);
+        (*force) -= mat3vecmul(damping_hessian, displacement);
         mat3add(ground_hessian, damping_hessian, ground_hessian);
     }
     
@@ -292,7 +558,7 @@ static inline void accumulateBoundaryForceAndHessian(
     if (friction <= 0.0f) return;
     mat32 T;
     buildOrthonormalBasis(ground_normal, T);
-    const fpreal2 u = mat32Tvecmul(T, diff);
+    const fpreal2 u = mat32Tvecmul(T, displacement);
     accumulateVertexFriction(friction, ground_force_norm, T, u, epsU * timeinc, force, hessian);
 }
 
@@ -323,8 +589,24 @@ kernel void solveConstraints(
     global int * restrict _bound_pointprims,
     int _bound_restlength_length,
     global fpreal * restrict _bound_restlength,
+#ifdef HAS_restmatrix
+    int _bound_restmatrix_length,
+    global fpreal * restrict _bound_restmatrix,
+#endif
     int _bound_stiffness_length,
     global fpreal * restrict _bound_stiffness,
+#ifdef HAS_bendstiffness
+    int _bound_bendstiffness_length,
+    global fpreal * restrict _bound_bendstiffness,
+#endif
+#ifdef HAS_dampingratio
+    int _bound_dampingratio_length,
+    global fpreal * restrict _bound_dampingratio,
+#endif
+#ifdef HAS_benddampingratio
+    int _bound_benddampingratio_length,
+    global fpreal * restrict _bound_benddampingratio,
+#endif
     int _bound_primpoints_length,
     global int * restrict _bound_primpoints_index,
     global int * restrict _bound_primpoints,
@@ -389,7 +671,8 @@ kernel void solveConstraints(
     if (mass <= 0.0f) SKIPWORKITEM; // Skip pinned points
     
     fpreal3 P = vload3(idx, _bound_P);
-    fpreal3 pprevious = vload3(idx, _bound_pprevious);
+    const fpreal3 pprevious = vload3(idx, _bound_pprevious);
+    const fpreal3 displacement = P - pprevious;
     const fpreal3 P_before_solve = P;
     const fpreal3 inertia = vload3(idx, _bound_inertia);
     const fpreal dt_sqr_reciprocal = 1.0f / (timeinc * timeinc);
@@ -409,7 +692,7 @@ kernel void solveConstraints(
         mat3copy(hessian, tmp_hessian);
     }
     
-    // Solve each constraint connected to the current point
+    // Accumulate forces for each constraint connected to the current point
     const int num_constraints = entriesAt(_bound_pointprims, idx);
     for (int constraint_id = 0; constraint_id < num_constraints; ++constraint_id)
     {
@@ -426,6 +709,17 @@ kernel void solveConstraints(
                     _bound_P, _bound_stiffness, _bound_restlength, improve_stability);
                 break;
             }
+#if defined(HAS_restmatrix) && defined(HAS_bendstiffness) && defined(HAS_dampingratio) && defined(HAS_benddampingratio)
+            case NEO_HOOKEAN:
+            {
+                accumulateMaterialForceAndHessian_NeoHookean(&force, hessian, idx, prim_id,
+                    _bound_primpoints, _bound_primpoints_index, _bound_primpoints_length,
+                    _bound_P, _bound_pprevious, _bound_restlength, _bound_restmatrix,
+                    _bound_stiffness, _bound_bendstiffness, _bound_dampingratio,
+                    _bound_benddampingratio, timeinc, displacement, improve_stability);
+                break;
+            }
+#endif
         }
     }
     
@@ -434,13 +728,14 @@ kernel void solveConstraints(
     {
         mat3 K;
         mat3sub(hessian, tmp_hessian, K);
-        accumulateDampingForceAndHessian(&force, hessian, (P - pprevious) / timeinc, timeinc, K, damping * timeinc);
+        accumulateDampingForceAndHessian(&force, hessian, displacement / timeinc,
+            timeinc, K, damping * timeinc);
     }
     
     if (use_bounds && ground_stiffness > 0.0f)
     {
         accumulateBoundaryForceAndHessian(
-            &force, hessian, P, pprevious, ground_pos, normalize(ground_normal),
+            &force, hessian, P, displacement, ground_pos, normalize(ground_normal),
             ground_stiffness, ground_damping, ground_friction, friction_epsilon, timeinc);
     }
     
