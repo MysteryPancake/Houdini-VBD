@@ -18,7 +18,7 @@ Thanks to Anka He Chen and Chris Giles for making these open source with permiss
   - [x] [Mass-spring energy definition](https://github.com/AnkaChan/TinyVBD/blob/main/main.cpp#L381) (for strings)
   - [x] [Accelerated convergence method (section 3.8)](https://graphics.cs.utah.edu/research/projects/vbd/vbd-siggraph2024.pdf)
 - [ ] Steal from [Gaia](https://github.com/AnkaChan/Gaia)
-  - [ ] [Neo-hookean energy definition](https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_NeoHookean.cpp) (for cloth)
+  - [x] [Neo-hookean energy definition](https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_NeoHookean.cpp) (for cloth)
   - [x] Damping
   - [x] Boundary collisions
   - [ ] Self collisions
