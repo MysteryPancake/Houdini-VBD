@@ -645,13 +645,16 @@ kernel void solveConstraints(
     int _bound_primpoints_length,
     global int * restrict _bound_primpoints_index,
     global int * restrict _bound_primpoints,
+#ifdef HAS_omega
     int _bound_omega_length,
     global fpreal * restrict _bound_omega,
+#endif
     const fpreal accel_rho,
     int iteration,
-    const int use_accel,
+#ifdef HAS_plastiter
     int _bound_plastiter_length,
     global fpreal * restrict _bound_plastiter,
+#endif
     const int solve_method,
     const fpreal min_force,
     const fpreal min_hessian,
@@ -707,17 +710,18 @@ kernel void solveConstraints(
     
     fpreal3 P = vload3(idx, _bound_P);
     const fpreal3 pprevious = vload3(idx, _bound_pprevious);
-    const fpreal3 displacement = P - pprevious;
-    const fpreal3 P_before_solve = P;
     const fpreal3 inertia = vload3(idx, _bound_inertia);
-    const fpreal dt_sqr_reciprocal = 1.0f / (timeinc * timeinc);
+
+#ifdef HAS_plastiter
+    const fpreal3 P_before_solve = P;
+#endif
     
     fpreal3 force = (fpreal3)(0.0f);
     mat3 hessian;
     mat3zero(hessian);
     
     // Include influence from inertia
-    accumulateInertiaForceAndHessian(&force, hessian, mass, P, inertia, dt_sqr_reciprocal);
+    accumulateInertiaForceAndHessian(&force, hessian, mass, P, inertia, 1.0f / (timeinc * timeinc));
     
     // Damping only affects the hessian for material forces in GAIA
     // https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBDPhysics.cpp#L2347-L2351
@@ -751,7 +755,7 @@ kernel void solveConstraints(
                     _bound_primpoints, _bound_primpoints_index, _bound_primpoints_length,
                     _bound_P, _bound_pprevious, _bound_restlength, _bound_restmatrix,
                     _bound_stiffness, _bound_bendstiffness, _bound_dampingratio,
-                    _bound_benddampingratio, timeinc, displacement);
+                    _bound_benddampingratio, timeinc, P - pprevious);
                 break;
             }
 #endif
@@ -763,14 +767,14 @@ kernel void solveConstraints(
     {
         mat3 K;
         mat3sub(hessian, tmp_hessian, K);
-        accumulateDampingForceAndHessian(&force, hessian, displacement / timeinc,
+        accumulateDampingForceAndHessian(&force, hessian, (P - pprevious) / timeinc,
             timeinc, K, damping * timeinc);
     }
     
     if (use_bounds && ground_stiffness > 0.0f)
     {
         accumulateBoundaryForceAndHessian(
-            &force, hessian, P, displacement, ground_pos, normalize(ground_normal),
+            &force, hessian, P, P - pprevious, ground_pos, normalize(ground_normal),
             ground_stiffness, ground_damping, ground_friction, friction_epsilon, timeinc);
     }
     
@@ -794,19 +798,18 @@ kernel void solveConstraints(
             vstore3(P, idx, _bound_P);
         }
     }
-    
-    // Accelerated convergence tends to explode, so it's disabled by default
-    if (use_accel) 
-    {
-        const fpreal omega = getAcceleratorOmega(iteration + 1, accel_rho, _bound_omega[idx]);
-        _bound_omega[idx] = omega;
 
-        const fpreal3 plast = vload3(idx, _bound_plastiter);
-        P = plast + (P - plast) * omega;
-        vstore3(P, idx, _bound_P);
+#if defined(HAS_omega) && defined(HAS_plastiter)
+    // Accelerated convergence, this tends to explode so it's disabled by default
+    const fpreal omega = getAcceleratorOmega(iteration + 1, accel_rho, _bound_omega[idx]);
+    _bound_omega[idx] = omega;
 
-        vstore3(P_before_solve, idx, _bound_plastiter);
-    }
+    const fpreal3 plast = vload3(idx, _bound_plastiter);
+    P = plast + (P - plast) * omega;
+    vstore3(P, idx, _bound_P);
+
+    vstore3(P_before_solve, idx, _bound_plastiter);
+#endif
 #ifdef SINGLE_WORKGROUP
 #ifdef SINGLE_WORKGROUP_ALWAYS
     }

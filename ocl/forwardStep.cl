@@ -5,7 +5,7 @@
 #bind point &v fpreal3
 #bind point &inertia fpreal3
 #bind point &pprevious fpreal3
-#bind point &omega fpreal val=1
+#bind point &?omega fpreal val=1
 #bind point vprevious fpreal3
 #bind point mass fpreal val=1
 
@@ -45,7 +45,9 @@
             break;
         }
     }
-    
-    // Used only when accelerated convergence is enabled
+
+#ifdef HAS_omega
+    // Used for accelerated convergence, tends to explode so it's disabled by default
     @omega.set(1);
+#endif
 }
