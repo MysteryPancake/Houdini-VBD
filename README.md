@@ -124,11 +124,11 @@ v@v = (v@P - v@pprevious) / f@TimeInc;
 
 ## Why does stiffness have a limit?
 
-Like with Vellum (XPBD), stiff objects are limited by the number of constraint iterations and substeps you use.
+Like with Vellum (XPBD), stiff objects are limited by the number of constraint iterations and substeps.
 
-The more constraint iterations and substeps, the more correctly stiff objects are resolved.
+The more constraint iterations and substeps, the more accurately stiff objects are resolved.
 
-VBD also includes an accelerated convergence method meant to improve convergence for stiff constraints.
+VBD also has accelerated convergence method meant to improve convergence for stiff constraints.
 
 It's in the "Advanced" tab and disabled by default, as it tends to explode with high values, but worth a try.
 
