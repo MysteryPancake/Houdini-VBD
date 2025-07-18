@@ -122,6 +122,28 @@ v@v = (v@P - v@pprevious) / f@TimeInc;
 | [OpenCL version](./ocl/updateVelocity.cl) | [VEX version (outdated)](./vex/updateVelocity.c) |
 | --- | --- |
 
+## Why does stiffness have a limit?
+
+Like with Vellum (XPBD), stiff objects are limited by the number of constraint iterations and substeps you use.
+
+The more constraint iterations and substeps, the more correctly stiff objects are resolved.
+
+VBD also includes an accelerated convergence method meant to improve convergence for stiff constraints.
+
+It's in the "Advanced" tab and disabled by default, as it tends to explode with high values, but worth a try.
+
+AVBD adds hard constraints which should resolve much faster, but I haven't implemented this yet.
+
+## Why do collisions not work sometimes?
+
+VBD solves collisions as soft constraints, meaning collision forces get added onto the force and hessian like everything else.
+
+In practice this means other forces can overpower collisions. For example, stiffer materials than the ground can penetrate it.
+
+This can be fixed by increasing the stiffness of the ground, or reducing the stiffness of everything else.
+
+AVBD adds hard constraints which should prevent this from happening, but I haven't implemented this yet.
+
 ## Why does it explode randomly?
 
 This solver used to explode every 5 seconds, but now it's much better. Explosions are a common issue with VBD.
