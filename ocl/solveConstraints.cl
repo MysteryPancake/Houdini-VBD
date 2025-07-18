@@ -29,40 +29,9 @@ static inline fpreal2 _mat32Tvecmul(const mat32 a, const fpreal3 b)
 
 static inline void _mat3adddiag(mat3 mout, const mat3 m, const fpreal x)
 {
-    for (int i = 0; i < 3; ++i)
-    {
-        mout[i][i] = m[i][i] + x;
-    }
-}
-
-static inline void _mat9outerprod(const fpreal9 a, const fpreal9 b, mat9 out)
-{
-    for (int row = 0; row < 9; ++row)
-    {
-        for (int col = 0; col < 9; ++col)
-        {
-            out[row][col] = a[row] * b[col];
-        }
-    }
-}
-
-static inline void _mat9scale(mat9 mout, const mat9 m, const fpreal scale)
-{
-    for (int row = 0; row < 9; ++row)
-    {
-        for (int col = 0; col < 9; ++col)
-        {
-            mout[row][col] = m[row][col] * scale;
-        }
-    }
-}
-
-static inline void _mat9adddiag(mat9 mout, const mat9 m, const fpreal x)
-{
-    for (int i = 0; i < 9; ++i)
-    {
-        mout[i][i] = m[i][i] + x;
-    }
+    mout[0][0] = m[0][0] + x;
+    mout[1][1] = m[1][1] + x;
+    mout[2][2] = m[2][2] + x;
 }
 
 // From https://graphics.pixar.com/library/OrthonormalB/paper.pdf
@@ -174,13 +143,15 @@ static inline void accumulateInertiaForceAndHessian(
     _mat3adddiag(hessian, hessian, md);
 }
 
-// Symmetric positive definite approximation of the hessian, greatly improves stability
+// Symmetric positive definite approximation of the hessian from AVBD
+// This greatly improves stability, especially for stiff constraints
 static inline void spdApproximation(mat3 h)
 {
     // Column norm in the diagonal
     const fpreal x0 = h[0][0], y0 = h[1][0], z0 = h[2][0];
     const fpreal x1 = h[0][1], y1 = h[1][1], z1 = h[2][1];
     const fpreal x2 = h[0][2], y2 = h[1][2], z2 = h[2][2];
+    
     h[0][0] = sqrt(x0 * x0 + y0 * y0 + z0 * z0);
     h[1][1] = sqrt(x1 * x1 + y1 * y1 + z1 * z1);
     h[2][2] = sqrt(x2 * x2 + y2 * y2 + z2 * z2);
@@ -270,6 +241,7 @@ static inline void assembleForceAndHessian_NeoHookean(
     }
 }
 
+// From https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_NeoHookean.cpp#L379
 static inline void accumulateMaterialForceAndHessian_NeoHookean(
     fpreal3 *force,
     mat3 hessian,
@@ -322,7 +294,7 @@ static inline void accumulateMaterialForceAndHessian_NeoHookean(
     mat3 F;
     mat3mul(Ds, Dminv, F);
     
-    // This is the wrong way around but works somehow
+    // This is the wrong way around but only works this way somehow
     const fpreal F1_1 = F[0][0];
     const fpreal F1_2 = F[0][1];
     const fpreal F1_3 = F[0][2];
@@ -345,57 +317,133 @@ static inline void accumulateMaterialForceAndHessian_NeoHookean(
         F1_1 * F2_2 - F1_2 * F2_1
     };
 
-    mat9 d2E_dF_dF;
-    _mat9outerprod(ddetF_dF, ddetF_dF, d2E_dF_dF);
-
     const fpreal k = det3(F) - a;
-    d2E_dF_dF[0][4] += k * F3_3;
-    d2E_dF_dF[4][0] += k * F3_3;
-    d2E_dF_dF[0][5] += k * -F2_3;
-    d2E_dF_dF[5][0] += k * -F2_3;
-    d2E_dF_dF[0][7] += k * -F3_2;
-    d2E_dF_dF[7][0] += k * -F3_2;
-    d2E_dF_dF[0][8] += k * F2_2;
-    d2E_dF_dF[8][0] += k * F2_2;
-    
-    d2E_dF_dF[1][3] += k * -F3_3;
-    d2E_dF_dF[3][1] += k * -F3_3;
-    d2E_dF_dF[1][5] += k * F1_3;
-    d2E_dF_dF[5][1] += k * F1_3;
-    d2E_dF_dF[1][6] += k * F3_2;
-    d2E_dF_dF[6][1] += k * F3_2;
-    d2E_dF_dF[1][8] += k * -F1_2;
-    d2E_dF_dF[8][1] += k * -F1_2;
-    
-    d2E_dF_dF[2][3] += k * F2_3;
-    d2E_dF_dF[3][2] += k * F2_3;
-    d2E_dF_dF[2][4] += k * -F1_3;
-    d2E_dF_dF[4][2] += k * -F1_3;
-    d2E_dF_dF[2][6] += k * -F2_2;
-    d2E_dF_dF[6][2] += k * -F2_2;
-    d2E_dF_dF[2][7] += k * F1_2;
-    d2E_dF_dF[7][2] += k * F1_2;
-    
-    d2E_dF_dF[3][7] += k * F3_1;
-    d2E_dF_dF[7][3] += k * F3_1;
-    d2E_dF_dF[3][8] += k * -F2_1;
-    d2E_dF_dF[8][3] += k * -F2_1;
-    
-    d2E_dF_dF[4][6] += k * -F3_1;
-    d2E_dF_dF[6][4] += k * -F3_1;
-    d2E_dF_dF[4][8] += k * F1_1;
-    d2E_dF_dF[8][4] += k * F1_1;
-    
-    d2E_dF_dF[5][6] += k * F2_1;
-    d2E_dF_dF[6][5] += k * F2_1;
-    d2E_dF_dF[5][7] += k * -F1_1;
-    d2E_dF_dF[7][5] += k * -F1_1;
-    
-    _mat9scale(d2E_dF_dF, d2E_dF_dF, lmbd);
-    _mat9adddiag(d2E_dF_dF, d2E_dF_dF, miu);
-
     const fpreal restVolume = _bound_restlength[prim_id];
-    _mat9scale(d2E_dF_dF, d2E_dF_dF, restVolume);
+    const fpreal scale_lmbd = restVolume * lmbd;
+    const fpreal scale_k = restVolume * k;
+    const fpreal scale_miu = restVolume * miu;
+    
+    mat9 d2E_dF_dF;
+    
+    // Diagonal parts
+    d2E_dF_dF[0][0] = scale_lmbd * (ddetF_dF[0] * ddetF_dF[0]) + scale_miu;
+    d2E_dF_dF[1][1] = scale_lmbd * (ddetF_dF[1] * ddetF_dF[1]) + scale_miu;
+    d2E_dF_dF[2][2] = scale_lmbd * (ddetF_dF[2] * ddetF_dF[2]) + scale_miu;
+    d2E_dF_dF[3][3] = scale_lmbd * (ddetF_dF[3] * ddetF_dF[3]) + scale_miu;
+    d2E_dF_dF[4][4] = scale_lmbd * (ddetF_dF[4] * ddetF_dF[4]) + scale_miu;
+    d2E_dF_dF[5][5] = scale_lmbd * (ddetF_dF[5] * ddetF_dF[5]) + scale_miu;
+    d2E_dF_dF[6][6] = scale_lmbd * (ddetF_dF[6] * ddetF_dF[6]) + scale_miu;
+    d2E_dF_dF[7][7] = scale_lmbd * (ddetF_dF[7] * ddetF_dF[7]) + scale_miu;
+    d2E_dF_dF[8][8] = scale_lmbd * (ddetF_dF[8] * ddetF_dF[8]) + scale_miu;
+    
+    // Symmetric parts
+    d2E_dF_dF[1][0] = scale_lmbd * (ddetF_dF[0] * ddetF_dF[1]);
+    d2E_dF_dF[0][1] = d2E_dF_dF[1][0];
+    
+    d2E_dF_dF[2][0] = scale_lmbd * (ddetF_dF[0] * ddetF_dF[2]);
+    d2E_dF_dF[0][2] = d2E_dF_dF[2][0];
+    
+    d2E_dF_dF[3][0] = scale_lmbd * (ddetF_dF[0] * ddetF_dF[3]);
+    d2E_dF_dF[0][3] = d2E_dF_dF[3][0];
+    
+    d2E_dF_dF[4][0] = scale_lmbd * (ddetF_dF[0] * ddetF_dF[4]) + scale_k * F3_3;
+    d2E_dF_dF[0][4] = d2E_dF_dF[4][0];
+    
+    d2E_dF_dF[5][0] = scale_lmbd * (ddetF_dF[0] * ddetF_dF[5]) + scale_k * -F2_3;
+    d2E_dF_dF[0][5] = d2E_dF_dF[5][0];
+    
+    d2E_dF_dF[6][0] = scale_lmbd * (ddetF_dF[0] * ddetF_dF[6]);
+    d2E_dF_dF[0][6] = d2E_dF_dF[6][0];
+    
+    d2E_dF_dF[7][0] = scale_lmbd * (ddetF_dF[0] * ddetF_dF[7]) + scale_k * -F3_2;
+    d2E_dF_dF[0][7] = d2E_dF_dF[7][0];
+    
+    d2E_dF_dF[8][0] = scale_lmbd * (ddetF_dF[0] * ddetF_dF[8]) + scale_k * F2_2;
+    d2E_dF_dF[0][8] = d2E_dF_dF[8][0];
+    
+    d2E_dF_dF[2][1] = scale_lmbd * (ddetF_dF[1] * ddetF_dF[2]);
+    d2E_dF_dF[1][2] = d2E_dF_dF[2][1];
+    
+    d2E_dF_dF[3][1] = scale_lmbd * (ddetF_dF[1] * ddetF_dF[3]) + scale_k * -F3_3;
+    d2E_dF_dF[1][3] = d2E_dF_dF[3][1];
+    
+    d2E_dF_dF[4][1] = scale_lmbd * (ddetF_dF[1] * ddetF_dF[4]);
+    d2E_dF_dF[1][4] = d2E_dF_dF[4][1];
+    
+    d2E_dF_dF[5][1] = scale_lmbd * (ddetF_dF[1] * ddetF_dF[5]) + scale_k * F1_3;
+    d2E_dF_dF[1][5] = d2E_dF_dF[5][1];
+    
+    d2E_dF_dF[6][1] = scale_lmbd * (ddetF_dF[1] * ddetF_dF[6]) + scale_k * F3_2;
+    d2E_dF_dF[1][6] = d2E_dF_dF[6][1];
+    
+    d2E_dF_dF[7][1] = scale_lmbd * (ddetF_dF[1] * ddetF_dF[7]);
+    d2E_dF_dF[1][7] = d2E_dF_dF[7][1];
+    
+    d2E_dF_dF[8][1] = scale_lmbd * (ddetF_dF[1] * ddetF_dF[8]) + scale_k * -F1_2;
+    d2E_dF_dF[1][8] = d2E_dF_dF[8][1];
+    
+    d2E_dF_dF[3][2] = scale_lmbd * (ddetF_dF[2] * ddetF_dF[3]) + scale_k * F2_3;
+    d2E_dF_dF[2][3] = d2E_dF_dF[3][2];
+    
+    d2E_dF_dF[4][2] = scale_lmbd * (ddetF_dF[2] * ddetF_dF[4]) + scale_k * -F1_3;
+    d2E_dF_dF[2][4] = d2E_dF_dF[4][2];
+    
+    d2E_dF_dF[5][2] = scale_lmbd * (ddetF_dF[2] * ddetF_dF[5]);
+    d2E_dF_dF[2][5] = d2E_dF_dF[5][2];
+    
+    d2E_dF_dF[6][2] = scale_lmbd * (ddetF_dF[2] * ddetF_dF[6]) + scale_k * -F2_2;
+    d2E_dF_dF[2][6] = d2E_dF_dF[6][2];
+    
+    d2E_dF_dF[7][2] = scale_lmbd * (ddetF_dF[2] * ddetF_dF[7]) + scale_k * F1_2;
+    d2E_dF_dF[2][7] = d2E_dF_dF[7][2];
+    
+    d2E_dF_dF[8][2] = scale_lmbd * (ddetF_dF[2] * ddetF_dF[8]);
+    d2E_dF_dF[2][8] = d2E_dF_dF[8][2];
+    
+    d2E_dF_dF[4][3] = scale_lmbd * (ddetF_dF[3] * ddetF_dF[4]);
+    d2E_dF_dF[3][4] = d2E_dF_dF[4][3];
+    
+    d2E_dF_dF[5][3] = scale_lmbd * (ddetF_dF[3] * ddetF_dF[5]);
+    d2E_dF_dF[3][5] = d2E_dF_dF[5][3];
+    
+    d2E_dF_dF[6][3] = scale_lmbd * (ddetF_dF[3] * ddetF_dF[6]);
+    d2E_dF_dF[3][6] = d2E_dF_dF[6][3];
+    
+    d2E_dF_dF[7][3] = scale_lmbd * (ddetF_dF[3] * ddetF_dF[7]) + scale_k * F3_1;
+    d2E_dF_dF[3][7] = d2E_dF_dF[7][3];
+    
+    d2E_dF_dF[8][3] = scale_lmbd * (ddetF_dF[3] * ddetF_dF[8]) + scale_k * -F2_1;
+    d2E_dF_dF[3][8] = d2E_dF_dF[8][3];
+    
+    d2E_dF_dF[5][4] = scale_lmbd * (ddetF_dF[4] * ddetF_dF[5]);
+    d2E_dF_dF[4][5] = d2E_dF_dF[5][4];
+    
+    d2E_dF_dF[6][4] = scale_lmbd * (ddetF_dF[4] * ddetF_dF[6]) + scale_k * -F3_1;
+    d2E_dF_dF[4][6] = d2E_dF_dF[6][4];
+    
+    d2E_dF_dF[7][4] = scale_lmbd * (ddetF_dF[4] * ddetF_dF[7]);
+    d2E_dF_dF[4][7] = d2E_dF_dF[7][4];
+    
+    d2E_dF_dF[8][4] = scale_lmbd * (ddetF_dF[4] * ddetF_dF[8]) + scale_k * F1_1;
+    d2E_dF_dF[4][8] = d2E_dF_dF[8][4];
+    
+    d2E_dF_dF[6][5] = scale_lmbd * (ddetF_dF[5] * ddetF_dF[6]) + scale_k * F2_1;
+    d2E_dF_dF[5][6] = d2E_dF_dF[6][5];
+    
+    d2E_dF_dF[7][5] = scale_lmbd * (ddetF_dF[5] * ddetF_dF[7]) + scale_k * -F1_1;
+    d2E_dF_dF[5][7] = d2E_dF_dF[7][5];
+    
+    d2E_dF_dF[8][5] = scale_lmbd * (ddetF_dF[5] * ddetF_dF[8]);
+    d2E_dF_dF[5][8] = d2E_dF_dF[8][5];
+    
+    d2E_dF_dF[7][6] = scale_lmbd * (ddetF_dF[6] * ddetF_dF[7]);
+    d2E_dF_dF[6][7] = d2E_dF_dF[7][6];
+    
+    d2E_dF_dF[8][6] = scale_lmbd * (ddetF_dF[6] * ddetF_dF[8]);
+    d2E_dF_dF[6][8] = d2E_dF_dF[8][6];
+    
+    d2E_dF_dF[8][7] = scale_lmbd * (ddetF_dF[7] * ddetF_dF[8]);
+    d2E_dF_dF[7][8] = d2E_dF_dF[8][7];
 
     fpreal9 dE_dF;
     for (int row = 0; row < 3; ++row)
