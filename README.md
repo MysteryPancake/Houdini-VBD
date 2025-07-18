@@ -7,7 +7,7 @@
 
 WIP of Vertex Block Descent (VBD) in Houdini. It runs natively without plugins, as god intended.
 
-There's an OpenCL version for performance, and an old VEX version if you want to understand how it works. Both are included in the HIP files.
+There's an OpenCL version for performance, and an old VEX version to show how it works. Both are included in the HIP files.
 
 I stole everything from [TinyVBD](https://github.com/AnkaChan/TinyVBD), some bits from [AVBD](https://github.com/savant117/avbd-demo2d), [Gaia](https://github.com/AnkaChan/Gaia) and some ideas from the papers.
 
