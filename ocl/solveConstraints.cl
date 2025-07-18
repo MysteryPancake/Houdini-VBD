@@ -259,8 +259,7 @@ static inline void accumulateMaterialForceAndHessian_NeoHookean(
     global fpreal *_bound_dampingratio,
     global fpreal *_bound_benddampingratio,
     const fpreal timeinc,
-    const fpreal3 displacement,
-    const int improve_stability)
+    const fpreal3 displacement)
 {
     // Hydrostatic energy stiffness (volume stiffness)
     const fpreal lmbd = _bound_stiffness[prim_id]; // 
@@ -484,9 +483,6 @@ static inline void accumulateMaterialForceAndHessian_NeoHookean(
     // Store the hessian here for damping
     mat3 d2E_dxi_dxi;
     assembleForceAndHessian_NeoHookean(dE_dF, d2E_dF_dF, m1, m2, m3, force, d2E_dxi_dxi);
-    
-    // Diagonal SPD approximation from AVBD greatly improves stability
-    if (improve_stability) spdApproximation(d2E_dxi_dxi);
     
     if (lmbd_damping > 0.0f || miu_damping > 0.0f)
     {
@@ -755,7 +751,7 @@ kernel void solveConstraints(
                     _bound_primpoints, _bound_primpoints_index, _bound_primpoints_length,
                     _bound_P, _bound_pprevious, _bound_restlength, _bound_restmatrix,
                     _bound_stiffness, _bound_bendstiffness, _bound_dampingratio,
-                    _bound_benddampingratio, timeinc, displacement, improve_stability);
+                    _bound_benddampingratio, timeinc, displacement);
                 break;
             }
 #endif
