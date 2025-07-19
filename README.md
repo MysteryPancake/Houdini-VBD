@@ -9,7 +9,7 @@ WIP of Vertex Block Descent (VBD) in Houdini. It runs natively without plugins, 
 
 There's an OpenCL version for performance, and an old VEX version to show how it works. Both are included in the HIP files.
 
-I stole everything from [TinyVBD](https://github.com/AnkaChan/TinyVBD), some bits from [AVBD](https://github.com/savant117/avbd-demo2d), [Gaia](https://github.com/AnkaChan/Gaia) and some ideas from the papers.
+I ported everything from [TinyVBD](https://github.com/AnkaChan/TinyVBD), some bits from [AVBD](https://github.com/savant117/avbd-demo2d), [Gaia](https://github.com/AnkaChan/Gaia) and some ideas from the papers.
 
 Thanks to Anka He Chen and Chris Giles for making these open source with permissive licenses!
 
@@ -80,9 +80,9 @@ v@P += v@v * f@TimeInc * v@gravity * f@TimeInc * f@TimeInc;
 
 ### 2. Apply the constraints
 
-The core idea of VBD is updating the position based on a force vector and a hessian matrix.
+The core idea of VBD is updating the position based on force elements and a hessian.
 
-If the influences are correct, moving the position should reduce the variational energy of the system.
+If these are correct, moving the position should reduce the overall variational energy.
 
 > [!CAUTION]
 > **This should be run in workgroups based on graph coloring!**
@@ -97,7 +97,7 @@ If the influences are correct, moving the position should reduce the variational
 vector force = 0;
 matrix3 hessian = 0;
 
-// Add influences to the force and hessian variables
+// Add influences to force elements and hessian
 accumulateInertiaForceAndHessian(force, hessian); // Influences due to mass and inertia
 accumulateMaterialForceAndHessian(force, hessian); // Influences due to constraints (eg mass-spring or neo-hookean)
 accumulateDampingForceAndHessian(force, hessian); // Influences due to damping
@@ -136,7 +136,7 @@ AVBD adds hard constraints which should resolve much faster, but I haven't imple
 
 ## Why do collisions not work sometimes?
 
-VBD solves collisions as soft constraints, meaning collision forces get added onto the force and hessian like everything else.
+VBD solves collisions as soft constraints, meaning collisions get added onto the force and hessian like everything else.
 
 In practice this means other forces can overpower collisions. For example, stiffer materials than the ground can penetrate it.
 
@@ -148,7 +148,7 @@ AVBD adds hard constraints which should prevent this from happening, but I haven
 
 This solver used to explode every 5 seconds, but now it's much better. Explosions are a common issue with VBD.
 
-VBD involves updating the position based on a force vector and a hessian matrix:
+Like mentioned, VBD involves updating the position based on force elements and a hessian:
 
 ```c
 v@P += force * invert(hessian); // force and hessian depend on the energy definition, eg mass-spring or neo-hookean
