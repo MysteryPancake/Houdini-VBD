@@ -654,7 +654,9 @@ kernel void solveConstraints(
     global fpreal * restrict _bound_omega,
 #endif
     const fpreal accel_rho,
+#ifdef HAS_iteration
     int iteration,
+#endif
 #ifdef HAS_plastiter
     int _bound_plastiter_length,
     global fpreal * restrict _bound_plastiter,
@@ -803,7 +805,7 @@ kernel void solveConstraints(
         }
     }
 
-#if defined(HAS_omega) && defined(HAS_plastiter)
+#if defined(HAS_omega) && defined(HAS_plastiter) && defined(HAS_iteration)
     // Accelerated convergence, this tends to explode so it's disabled by default
     const fpreal omega = getAcceleratorOmega(iteration + 1, accel_rho, _bound_omega[idx]);
     _bound_omega[idx] = omega;
