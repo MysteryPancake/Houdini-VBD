@@ -49,7 +49,7 @@ VBD constraints are similar, but they're defined in terms of energy instead. The
 
 <img src="./images/energyreduction.png" width="700">
 
-The diagram above is for mass-spring energy, based on the rest length of each edge. In this case it's not so different to XPBD, but the idea of minimizing energy is different to minimizing distance. It can be applied to other scenarios too.
+The diagram above is for mass-spring energy, based on the rest length of each edge. In this case it's not so different to XPBD, but the idea of minimizing energy is different to minimizing distance.
 
 Here's a quick comparison between VBD and XPBD:
 
