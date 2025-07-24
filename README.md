@@ -45,7 +45,7 @@ Cloth is a good example of a soft body. It's easy to bend but hard to stretch. I
 
 <img src="./images/edging.png" width="700">
 
-VBD constraints are similar, but they're defined in terms of energy instead. They also run over each point rather than each constraint, meaning less workgroups (colors) overall. The Graph Color node allows workgroups for points as well as prims, so it works both for VBD and XPBD.
+VBD constraints are similar, but they're defined in terms of energy instead. The goal is reducing the global variational energy by reducing local energy per point. VBD constraints run over each point rather than each primitive, meaning less workgroups (colors) overall. However, each point typically has to loop over its neighbours to compute the energy, so the performance isn't necessarily better. The Graph Color node allows workgroups for points as well as prims, so it works both for VBD and XPBD.
 
 Here's a quick comparison between VBD and XPBD:
 
