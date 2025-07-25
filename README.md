@@ -84,7 +84,7 @@ v@P += v@v * f@TimeInc * v@gravity * f@TimeInc * f@TimeInc;
 
 ### 2. Apply the constraints
 
-The core idea of VBD is updating the position based on force elements and a hessian.
+The core idea of VBD is updating the position based on force elements and a hessian matrix.
 
 If these are correct, moving the position should reduce the overall variational energy.
 
@@ -152,7 +152,7 @@ AVBD adds hard constraints which should prevent this from happening, but I haven
 
 This solver used to explode every 5 seconds, but now it's much better. Explosions are a common issue with VBD.
 
-Like mentioned, VBD involves updating the position based on force elements and a hessian:
+As mentioned, VBD involves updating the position based on force elements and a hessian matrix:
 
 ```c
 v@P += force * invert(hessian); // force and hessian depend on the energy definition, eg mass-spring or neo-hookean
