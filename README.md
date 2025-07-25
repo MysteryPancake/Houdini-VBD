@@ -168,7 +168,7 @@ if (abs(determinant(hessian)) > 1e-7) { // if |det(H𝑖)| > 𝜖 for some small
 
 This helps, but it also explodes when the values gets too large (for example with very stiff constraints).
 
-The new [AVBD paper](https://graphics.cs.utah.edu/research/projects/avbd/Augmented_VBD-SIGGRAPH25.pdf) uses an approximation to make the hessian positive semi-definite. This massively improves the stability.
+The new [AVBD paper](https://graphics.cs.utah.edu/research/projects/avbd/Augmented_VBD-SIGGRAPH25.pdf) uses an approximation to make the hessian positive semi-definite. This massively improves the stability and is enabled by default. It's in the Advanced tab under "Improve Hessian Stability".
 
 ## AVBD Q&A
 
