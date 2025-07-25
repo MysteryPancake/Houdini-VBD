@@ -213,7 +213,7 @@ Hi Chris, I was wondering what type energy you used for constraints? There were 
 >
 > However, TinyVBD and AVBD set `@vprevious` in a different place. I thought this was a typo, but turns out it's not.
 
-Hello, I was wondering if the order of these 2 lines is correct?
+Hi Chris, I was wondering if the order of these 2 lines is correct?
 
 ```cpp
 body->prevVelocity = body->velocity; 
