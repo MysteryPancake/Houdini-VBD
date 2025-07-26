@@ -134,7 +134,7 @@ The more constraint iterations and substeps, the more accurately stiff objects a
 
 VBD also has accelerated convergence method meant to improve convergence for stiff constraints.
 
-It's in the "Advanced" tab and disabled by default, as it tends to explode with high values, but worth a try.
+It's named "Improve Convergence" in the Advanced tab and disabled by default, as it tends to explode with high values.
 
 AVBD adds hard constraints which should resolve much faster, but I haven't implemented this yet.
 
@@ -168,7 +168,7 @@ if (abs(determinant(hessian)) > 1e-7) { // if |det(H𝑖)| > 𝜖 for some small
 
 This helps, but it also explodes when the values gets too large (for example with very stiff constraints).
 
-The new [AVBD paper](https://graphics.cs.utah.edu/research/projects/avbd/Augmented_VBD-SIGGRAPH25.pdf) uses an approximation to make the hessian positive semi-definite. This massively improves the stability and is enabled by default. It's in the Advanced tab under "Improve Hessian Stability".
+The new [AVBD paper](https://graphics.cs.utah.edu/research/projects/avbd/Augmented_VBD-SIGGRAPH25.pdf) uses an approximation to make the hessian positive semi-definite. This massively improves the stability and is enabled by default. It's named "Improve Hessian Stability" in the Advanced tab.
 
 ## AVBD Q&A
 
