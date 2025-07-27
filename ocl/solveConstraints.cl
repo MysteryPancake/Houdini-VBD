@@ -12,7 +12,7 @@
 #define entriesAt(_arr_, _idx_) ((_idx_ >= 0 && _idx_ < _arr_##_length) ? (_arr_##_index[_idx_+1] - _arr_##_index[_idx_]) : 0)
 #define compAt(_arr_, _idx_, _compidx_) ((_idx_ >= 0 && _idx_ < _arr_##_length && _compidx_ >= 0 && _compidx_ < entriesAt_unsafe(_arr_, _idx_)) ? _arr_[_arr_##_index[_idx_] + _compidx_] : 0)
 
-// Very rough approximation to match Vellum
+// Rough approximation to match Vellum
 const fpreal STIFFNESS_SCALE = 10.0f;
 const fpreal DAMPING_SCALE = 0.001f;
 
@@ -285,6 +285,7 @@ static inline void accumulateMaterialForceAndHessian_NeoHookean(
     const fpreal3 p3 = vload3(pt3, _bound_P);
 
     // Ds = current tet deform
+    // Reordered to match Vellum (originally p1 - p0, p2 - p0, p3 - p0)
     mat3 Ds;
     mat3fromcols(p0 - p3, p1 - p3, p2 - p3, Ds);
     
@@ -457,6 +458,7 @@ static inline void accumulateMaterialForceAndHessian_NeoHookean(
         }
     }
 
+    // Reordered to match Vellum (originally p1 - p0, p2 - p0, p3 - p0)
     fpreal m1, m2, m3;
     if (idx == pt0)
     {
