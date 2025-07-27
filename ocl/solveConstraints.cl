@@ -12,6 +12,10 @@
 #define entriesAt(_arr_, _idx_) ((_idx_ >= 0 && _idx_ < _arr_##_length) ? (_arr_##_index[_idx_+1] - _arr_##_index[_idx_]) : 0)
 #define compAt(_arr_, _idx_, _compidx_) ((_idx_ >= 0 && _idx_ < _arr_##_length && _compidx_ >= 0 && _compidx_ < entriesAt_unsafe(_arr_, _idx_)) ? _arr_[_arr_##_index[_idx_] + _compidx_] : 0)
 
+// Very rough approximation to match Vellum
+const fpreal STIFFNESS_SCALE = 10.0f;
+const fpreal DAMPING_SCALE = 0.001f;
+
 typedef fpreal fpreal9[9];
 typedef fpreal9 mat9[9];
 
@@ -187,9 +191,7 @@ static inline void accumulateMaterialForceAndHessian_MassSpring(
     const fpreal l0 = _bound_restlength[prim_id];
     const fpreal l_ratio = l0 / l;
     const fpreal l2 = l * l;
-    
-    // VBD is about 10x less stiff than Vellum
-    const fpreal stiffness = _bound_stiffness[prim_id] * 10.0f;
+    const fpreal stiffness = _bound_stiffness[prim_id] * STIFFNESS_SCALE;
     
     // Hessian for the mass-spring energy definition, inlined for speed
     // From https://github.com/AnkaChan/TinyVBD/blob/main/main.cpp#L381
@@ -263,12 +265,12 @@ static inline void accumulateMaterialForceAndHessian_NeoHookean(
     const int improve_stability)
 {
     // Hydrostatic energy stiffness (volume stiffness)
-    const fpreal lmbd = _bound_stiffness[prim_id]; // 
-    const fpreal lmbd_damping = _bound_dampingratio[prim_id];
+    const fpreal lmbd = _bound_stiffness[prim_id] * STIFFNESS_SCALE;
+    const fpreal lmbd_damping = _bound_dampingratio[prim_id] * DAMPING_SCALE;
     
     // Deviatoric energy stiffness (shear stiffness)
-    const fpreal miu = _bound_bendstiffness[prim_id];
-    const fpreal miu_damping = _bound_benddampingratio[prim_id];
+    const fpreal miu = _bound_bendstiffness[prim_id] * STIFFNESS_SCALE;
+    const fpreal miu_damping = _bound_benddampingratio[prim_id] * DAMPING_SCALE;
     
     const fpreal a = 1.0f + miu / lmbd;
 
@@ -284,7 +286,7 @@ static inline void accumulateMaterialForceAndHessian_NeoHookean(
 
     // Ds = current tet deform
     mat3 Ds;
-    mat3fromcols(p1 - p0, p2 - p0, p3 - p0, Ds);
+    mat3fromcols(p0 - p3, p1 - p3, p2 - p3, Ds);
     
     // Dminv = tet rest deform inverse
     mat3 Dminv;
@@ -458,27 +460,27 @@ static inline void accumulateMaterialForceAndHessian_NeoHookean(
     fpreal m1, m2, m3;
     if (idx == pt0)
     {
-        m1 = -Dminv[0][0] - Dminv[1][0] - Dminv[2][0];
-        m2 = -Dminv[0][1] - Dminv[1][1] - Dminv[2][1];
-        m3 = -Dminv[0][2] - Dminv[1][2] - Dminv[2][2];
-    }
-    else if (idx == pt1)
-    {
         m1 = Dminv[0][0];
         m2 = Dminv[0][1];
         m3 = Dminv[0][2];
-    } 
-    else if (idx == pt2)
+    }
+    else if (idx == pt1)
     {
         m1 = Dminv[1][0];
         m2 = Dminv[1][1];
         m3 = Dminv[1][2];
-    }
-    else
+    } 
+    else if (idx == pt2)
     {
         m1 = Dminv[2][0];
         m2 = Dminv[2][1];
         m3 = Dminv[2][2];
+    }
+    else
+    {
+        m1 = -Dminv[0][0] - Dminv[1][0] - Dminv[2][0];
+        m2 = -Dminv[0][1] - Dminv[1][1] - Dminv[2][1];
+        m3 = -Dminv[0][2] - Dminv[1][2] - Dminv[2][2];
     }
 
     // Store the hessian here for damping
@@ -774,14 +776,14 @@ kernel void solveConstraints(
         mat3 K;
         mat3sub(hessian, tmp_hessian, K);
         accumulateDampingForceAndHessian(&force, hessian, (P - pprevious) / timeinc,
-            timeinc, K, damping * timeinc);
+            timeinc, K, damping * timeinc * DAMPING_SCALE);
     }
     
     if (use_bounds && ground_stiffness > 0.0f)
     {
         accumulateBoundaryForceAndHessian(
             &force, hessian, P, P - pprevious, ground_pos, normalize(ground_normal),
-            ground_stiffness, ground_damping, ground_friction, friction_epsilon, timeinc);
+            ground_stiffness, ground_damping * DAMPING_SCALE, ground_friction, friction_epsilon, timeinc);
     }
     
     // The core of VBD is P += force * invert(hessian)
