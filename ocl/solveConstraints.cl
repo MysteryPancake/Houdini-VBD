@@ -742,6 +742,7 @@ kernel void solveConstraints(
     }
     
     // Accumulate forces for each constraint connected to the current point
+    // This should really be run in parallel (thread level) to match the paper
     const int num_constraints = entriesAt(_bound_pointprims, idx);
     for (int constraint_id = 0; constraint_id < num_constraints; ++constraint_id)
     {

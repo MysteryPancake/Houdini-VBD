@@ -28,7 +28,7 @@
             @P.set(inertia + gravity);
             break;
         }
-        case 1: // Adaptive warmstart
+        case 1: // Adaptive warmstart, this has bizarre issues with gravity reduction depending on mass
         {
             if (@SimFrame <= 2)
             {

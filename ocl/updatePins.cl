@@ -5,11 +5,9 @@
 
 @KERNEL
 {
-    if (@gluetoanimation)
-    {
-        // Graph Color sorts the points, so the order of the animated points mismatches
-        // @coloredidx stores the index before sorting, use it to map back to the correct point
-        @P.set(@animP.getAt(@coloredidx));
-        return;
-    }
+    if (!@gluetoanimation) return;
+
+    // Graph Color sorts the points, so the order of the animated points mismatches
+    // @coloredidx stores the index before sorting, use it to map back to the correct point
+    @P.set(@animP.getAt(@coloredidx));
 }
