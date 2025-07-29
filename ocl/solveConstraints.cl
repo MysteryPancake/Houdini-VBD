@@ -140,11 +140,11 @@ static inline void accumulateInertiaForceAndHessian(
     const fpreal mass,
     const fpreal3 P,
     const fpreal3 inertia,
-    const fpreal dt_sqr_reciprocal)
+    const fpreal timeinc)
 {
-    const fpreal md = mass * dt_sqr_reciprocal;
-    (*force) += (inertia - P) * md;
-    _mat3adddiag(hessian, hessian, md);
+    const fpreal scale = mass / (timeinc * timeinc);
+    (*force) += (inertia - P) * scale;
+    _mat3adddiag(hessian, hessian, scale);
 }
 
 // Symmetric positive definite approximation of the hessian from AVBD
@@ -186,22 +186,22 @@ static inline void accumulateMaterialForceAndHessian_MassSpring(
     const fpreal3 p0 = vload3(pt0, _bound_P);
     const fpreal3 p1 = vload3(pt1, _bound_P);
     
-    const fpreal3 diff = p0 - p1;
-    const fpreal l = length(diff);
-    const fpreal l0 = _bound_restlength[prim_id];
-    const fpreal l_ratio = l0 / l;
-    const fpreal l2 = l * l;
+    const fpreal3 d = p0 - p1;
+    const fpreal dlen2 = dot(d, d);
+    const fpreal dlen = sqrt(dlen2);
+    const fpreal rest = _bound_restlength[prim_id];
     const fpreal stiffness = _bound_stiffness[prim_id] * STIFFNESS_SCALE;
+    const fpreal l_ratio = rest / dlen;
     
-    // Hessian for the mass-spring energy definition, inlined for speed
+    // Hessian for the mass-spring energy definition (inlined for speed)
     // From https://github.com/AnkaChan/TinyVBD/blob/main/main.cpp#L381
     mat3 ms_hessian;
     const fpreal3 x_ident = (fpreal3)(1.0f, 0.0f, 0.0f);
     const fpreal3 y_ident = (fpreal3)(0.0f, 1.0f, 0.0f);
     const fpreal3 z_ident = (fpreal3)(0.0f, 0.0f, 1.0f);
-    ms_hessian[0] = stiffness * (x_ident - l_ratio * (x_ident - (diff * diff.x) / l2));
-    ms_hessian[1] = stiffness * (y_ident - l_ratio * (y_ident - (diff * diff.y) / l2));
-    ms_hessian[2] = stiffness * (z_ident - l_ratio * (z_ident - (diff * diff.z) / l2));
+    ms_hessian[0] = stiffness * (x_ident - l_ratio * (x_ident - (d * d.x) / dlen2));
+    ms_hessian[1] = stiffness * (y_ident - l_ratio * (y_ident - (d * d.y) / dlen2));
+    ms_hessian[2] = stiffness * (z_ident - l_ratio * (z_ident - (d * d.z) / dlen2));
     
     // Diagonal SPD approximation from AVBD greatly improves stability
     if (improve_stability) spdApproximation(ms_hessian);
@@ -210,7 +210,7 @@ static inline void accumulateMaterialForceAndHessian_MassSpring(
     
     // Force for the mass-spring energy definition
     // From https://github.com/AnkaChan/TinyVBD/blob/main/main.cpp#L384-L391
-    (*force) += (stiffness * (l0 - l) / l) * diff * (pt0 == idx ? 1 : -1);
+    (*force) += (stiffness * (rest - dlen) / dlen) * d * (pt0 == idx ? 1 : -1);
 }
 
 // From https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_NeoHookean.cpp#L126
@@ -731,7 +731,7 @@ kernel void solveConstraints(
     mat3zero(hessian);
     
     // Include influence from inertia
-    accumulateInertiaForceAndHessian(&force, hessian, mass, P, inertia, 1.0f / (timeinc * timeinc));
+    accumulateInertiaForceAndHessian(&force, hessian, mass, P, inertia, timeinc);
     
     // Damping only affects the hessian for material forces in GAIA
     // https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBDPhysics.cpp#L2347-L2351
