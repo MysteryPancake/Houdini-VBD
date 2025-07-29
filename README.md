@@ -25,7 +25,8 @@ Thanks to Anka He Chen and Chris Giles for making these open source with permiss
 - [ ] Steal from [Gaia](https://github.com/AnkaChan/Gaia)
   - [x] [Neo-hookean energy definition](https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_NeoHookean.cpp) (for tetrahedrons)
   - [x] Damping
-  - [x] Boundary collisions
+  - [x] Floor collisions
+  - [ ] SDF collisions
   - [ ] Self collisions
   - [ ] External collisions
   - [x] Friction
