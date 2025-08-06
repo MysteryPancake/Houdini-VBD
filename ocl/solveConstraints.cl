@@ -38,6 +38,7 @@ static inline void _mat3adddiag(mat3 mout, const mat3 m, const fpreal x)
     mout[2][2] = m[2][2] + x;
 }
 
+// Helps compute tangents for friction based on the surface normal
 // From https://graphics.pixar.com/library/OrthonormalB/paper.pdf
 static inline void buildOrthonormalBasis(const fpreal3 n, mat32 out)
 {
@@ -132,7 +133,7 @@ static inline fpreal getAcceleratorOmega(
     }
 }
 
-// Include influence from inertia
+// Influence from inertia and mass. Sadly this also includes gravity, so damping also affects gravity
 // From https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_BaseMaterial.h#L359
 static inline void accumulateInertiaForceAndHessian(
     fpreal3 *force,
@@ -147,15 +148,14 @@ static inline void accumulateInertiaForceAndHessian(
     _mat3adddiag(hessian, hessian, scale);
 }
 
-// Symmetric positive definite approximation of the hessian from AVBD
-// This greatly improves stability, especially for stiff constraints
+// SPD diagonal approximation of the hessian from AVBD
+// This greatly improves stability for stiff constraints, but causes issues with neo-hookean
 static inline void spdApproximation(mat3 h)
 {
     // Column norm in the diagonal
     const fpreal x0 = h[0][0], y0 = h[1][0], z0 = h[2][0];
     const fpreal x1 = h[0][1], y1 = h[1][1], z1 = h[2][1];
     const fpreal x2 = h[0][2], y2 = h[1][2], z2 = h[2][2];
-    
     h[0][0] = sqrt(x0 * x0 + y0 * y0 + z0 * z0);
     h[1][1] = sqrt(x1 * x1 + y1 * y1 + z1 * z1);
     h[2][2] = sqrt(x2 * x2 + y2 * y2 + z2 * z2);
@@ -166,7 +166,8 @@ static inline void spdApproximation(mat3 h)
     h[2][0] = 0.0f; h[2][1] = 0.0f;
 }
 
-// Include influence from spring constraints, for mass-spring energy
+// Energy for mass-spring constraints, based on their restlength like XPBD
+// From https://github.com/AnkaChan/TinyVBD/blob/main/main.cpp#L381
 static inline void accumulateMaterialForceAndHessian_MassSpring(
     fpreal3 *force,
     mat3 hessian,
@@ -193,8 +194,7 @@ static inline void accumulateMaterialForceAndHessian_MassSpring(
     const fpreal stiffness = _bound_stiffness[prim_id] * STIFFNESS_SCALE;
     const fpreal l_ratio = rest / dlen;
     
-    // Hessian for the mass-spring energy definition (inlined for speed)
-    // From https://github.com/AnkaChan/TinyVBD/blob/main/main.cpp#L381
+    // Mass-spring hessian from TinyVBD, inlined for speed
     mat3 ms_hessian;
     const fpreal3 x_ident = (fpreal3)(1.0f, 0.0f, 0.0f);
     const fpreal3 y_ident = (fpreal3)(0.0f, 1.0f, 0.0f);
@@ -203,16 +203,16 @@ static inline void accumulateMaterialForceAndHessian_MassSpring(
     ms_hessian[1] = stiffness * (y_ident - l_ratio * (y_ident - (d * d.y) / dlen2));
     ms_hessian[2] = stiffness * (z_ident - l_ratio * (z_ident - (d * d.z) / dlen2));
     
-    // Diagonal SPD approximation from AVBD greatly improves stability
+    // SPD approximation from AVBD greatly improves stability for mass-spring
     if (improve_stability) spdApproximation(ms_hessian);
     
     mat3add(hessian, ms_hessian, hessian);
     
-    // Force for the mass-spring energy definition
-    // From https://github.com/AnkaChan/TinyVBD/blob/main/main.cpp#L384-L391
+    // Mass-spring force gradient from TinyVBD
     (*force) += (stiffness * (rest - dlen) / dlen) * d * (pt0 == idx ? 1 : -1);
 }
 
+// For neo-hookean constraints, turn the 9x9 deformation gradient into a 3x3 hessian
 // From https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_NeoHookean.cpp#L126
 static inline void assembleForceAndHessian_NeoHookean(
     const fpreal9 dE_dF,
@@ -243,6 +243,7 @@ static inline void assembleForceAndHessian_NeoHookean(
     }
 }
 
+// Energy for neo-hookean constraints, based on each tet's volume deformation
 // From https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_NeoHookean.cpp#L379
 static inline void accumulateMaterialForceAndHessian_NeoHookean(
     fpreal3 *force,
@@ -261,8 +262,7 @@ static inline void accumulateMaterialForceAndHessian_NeoHookean(
     global fpreal *_bound_dampingratio,
     global fpreal *_bound_benddampingratio,
     const fpreal timeinc,
-    const fpreal3 displacement,
-    const int improve_stability)
+    const fpreal3 displacement)
 {
     // Hydrostatic energy stiffness (volume stiffness)
     const fpreal lmbd = _bound_stiffness[prim_id] * STIFFNESS_SCALE;
@@ -297,7 +297,7 @@ static inline void accumulateMaterialForceAndHessian_NeoHookean(
     mat3 F;
     mat3mul(Ds, Dminv, F);
     
-    // This is the wrong way around but only works this way somehow
+    // This is the wrong order (col major) but only works this way
     const fpreal F1_1 = F[0][0];
     const fpreal F1_2 = F[0][1];
     const fpreal F1_3 = F[0][2];
@@ -326,6 +326,8 @@ static inline void accumulateMaterialForceAndHessian_NeoHookean(
     const fpreal scale_k = restVolume * k;
     const fpreal scale_miu = restVolume * miu;
     
+    // 9x9 matrix to store the deformation gradient
+    // Vellum only uses a few cross products per tet, so this is much slower
     mat9 d2E_dF_dF;
     
     // Diagonal parts
@@ -339,7 +341,7 @@ static inline void accumulateMaterialForceAndHessian_NeoHookean(
     d2E_dF_dF[7][7] = scale_lmbd * (ddetF_dF[7] * ddetF_dF[7]) + scale_miu;
     d2E_dF_dF[8][8] = scale_lmbd * (ddetF_dF[8] * ddetF_dF[8]) + scale_miu;
     
-    // Symmetric parts
+    // Symmetric parts, inlined for speed
     d2E_dF_dF[1][0] = scale_lmbd * (ddetF_dF[0] * ddetF_dF[1]);
     d2E_dF_dF[0][1] = d2E_dF_dF[1][0];
     
@@ -453,12 +455,14 @@ static inline void accumulateMaterialForceAndHessian_NeoHookean(
     {
         for (int col = 0; col < 3; ++col)
         {
+            // i is likely wrong too (col major), but it only works this way
             const int i = col * 3 + row;
             dE_dF[i] = restVolume * (F[row][col] * miu + ddetF_dF[i] * lmbd * k);
         }
     }
 
     // Reordered to match Vellum (originally p1 - p0, p2 - p0, p3 - p0)
+    // The deformation direction depends on which point we are, but the forces stay the same
     fpreal m1, m2, m3;
     if (idx == pt0)
     {
@@ -489,9 +493,8 @@ static inline void accumulateMaterialForceAndHessian_NeoHookean(
     mat3 d2E_dxi_dxi;
     assembleForceAndHessian_NeoHookean(dE_dF, d2E_dF_dF, m1, m2, m3, force, d2E_dxi_dxi);
     
-    // Diagonal SPD approximation from AVBD sometimes prevents explosions
-    if (improve_stability) spdApproximation(d2E_dxi_dxi);
-    
+    // Damping doesn't work well, but there's a few definitions for it in GAIA
+    // This one is from https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBDPhysicsCompute.cu#L2198
     if (lmbd_damping > 0.0f || miu_damping > 0.0f)
     {
         mat3 dampingH;
@@ -511,7 +514,7 @@ static inline void accumulateMaterialForceAndHessian_NeoHookean(
 }
 
 // From https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBDPhysics.cpp#L2786
-// Doesn't always work well, but makes cool looking patterns
+// Doesn't work well and tends to dampen gravity, but makes cool patterns in Vellum 2nd order mode
 static inline void accumulateDampingForceAndHessian(
     fpreal3 *force,
     mat3 hessian,
@@ -528,6 +531,7 @@ static inline void accumulateDampingForceAndHessian(
     mat3add(hessian, damping_hessian, hessian);
 }
 
+// Energy from friction, used for all types of collisions in GAIA
 // From https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_GeneralCompute.h#L10
 // Based on https://github.com/ipc-sim/ipc-toolkit/blob/main/src/ipc/friction/smooth_friction_mollifier.cpp
 static inline void accumulateVertexFriction(
@@ -561,6 +565,7 @@ static inline void accumulateVertexFriction(
     }
 }
 
+// Planar collisions with friction
 // From https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_GeneralCompute.h#L87
 // Improved by https://github.com/NVIDIA/warp/blob/main/warp/sim/integrator_vbd.py#L513
 static inline void accumulateBoundaryForceAndHessian(
@@ -579,6 +584,8 @@ static inline void accumulateBoundaryForceAndHessian(
     const fpreal penetration_depth = -dot(ground_normal, P - ground_pos);
     if (penetration_depth <= 0.0f) return;
     
+    // Collisions can be overpowered by stiff constraints, causing penetration
+    // This should be improved by hard constraints from AVBD
     const fpreal ground_force_norm = penetration_depth * stiffness;
     (*force) += ground_normal * ground_force_norm;
     
@@ -726,11 +733,13 @@ kernel void solveConstraints(
     const fpreal3 P_before_solve = P;
 #endif
     
+    // Everything gets added to the force and hessian below
+    // Then the position gets updated: P += force * invert(hessian)
     fpreal3 force = (fpreal3)(0.0f);
     mat3 hessian;
     mat3zero(hessian);
     
-    // Include influence from inertia
+    // Include energy from inertia (this includes gravity) and mass
     accumulateInertiaForceAndHessian(&force, hessian, mass, P, inertia, timeinc);
     
     // Damping only affects the hessian for material forces in GAIA
@@ -741,7 +750,7 @@ kernel void solveConstraints(
         mat3copy(hessian, tmp_hessian);
     }
     
-    // Accumulate forces for each constraint connected to the current point
+    // Accumulate energy for each constraint connected to the current point
     // This should really be run in parallel (thread level) to match the paper
     const int num_constraints = entriesAt(_bound_pointprims, idx);
     for (int constraint_id = 0; constraint_id < num_constraints; ++constraint_id)
@@ -766,14 +775,14 @@ kernel void solveConstraints(
                     _bound_primpoints, _bound_primpoints_index, _bound_primpoints_length,
                     _bound_P, _bound_pprevious, _bound_restlength, _bound_restmatrix,
                     _bound_stiffness, _bound_bendstiffness, _bound_dampingratio,
-                    _bound_benddampingratio, timeinc, P - pprevious, improve_stability);
+                    _bound_benddampingratio, timeinc, P - pprevious);
                 break;
             }
 #endif
         }
     }
     
-    // Include influence from damping, doesn't work well but makes cool patterns
+    // Apply damping, doesn't work well but makes cool patterns
     if (damping > 0.0f)
     {
         mat3 K;
@@ -789,7 +798,7 @@ kernel void solveConstraints(
             ground_stiffness, ground_damping * DAMPING_SCALE, ground_friction, friction_epsilon, timeinc);
     }
     
-    // The core of VBD is P += force * invert(hessian)
+    // The core of VBD: P += force * invert(hessian)
     // Sadly invert(hessian) is mega unstable, so we bandaid it below
     if (dot(force, force) > (min_force * min_force))
     {
@@ -805,13 +814,13 @@ kernel void solveConstraints(
         }
         else if (fabs(det3(hessian)) > min_hessian)
         {
-            P += solveLDLT(force, hessian) * convergence;
+            P += solveLDLT(force, hessian) * convergence; // Requires the hessian to be SPD
             vstore3(P, idx, _bound_P);
         }
     }
 
 #if defined(HAS_omega) && defined(HAS_plastiter) && defined(HAS_iteration)
-    // Accelerated convergence, this tends to explode so it's disabled by default
+    // Accelerated convergence, tends to explode so disabled by default
     const fpreal omega = getAcceleratorOmega(iteration + 1, accel_rho, _bound_omega[idx]);
     _bound_omega[idx] = omega;
 
