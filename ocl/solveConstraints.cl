@@ -178,8 +178,7 @@ static inline void accumulateMaterialForceAndHessian_MassSpring(
     const int _bound_primpoints_length,
     global fpreal *_bound_P,
     global fpreal* _bound_stiffness,
-    global fpreal *_bound_restlength,
-    const int improve_stability)
+    global fpreal *_bound_restlength)
 {
     // Get the edge's first 2 points, assuming one point is us
     const int pt0 = compAt(_bound_primpoints, prim_id, 0);
@@ -203,8 +202,8 @@ static inline void accumulateMaterialForceAndHessian_MassSpring(
     ms_hessian[1] = stiffness * (y_ident - l_ratio * (y_ident - (d * d.y) / dlen2));
     ms_hessian[2] = stiffness * (z_ident - l_ratio * (z_ident - (d * d.z) / dlen2));
     
-    // SPD approximation from AVBD greatly improves stability for mass-spring
-    if (improve_stability) spdApproximation(ms_hessian);
+    // SPD approximation from AVBD greatly improves stability
+    spdApproximation(ms_hessian);
     
     mat3add(hessian, ms_hessian, hessian);
     
@@ -681,12 +680,11 @@ kernel void solveConstraints(
     int _bound_pprevious_length,
     global fpreal * restrict _bound_pprevious,
     const fpreal damping,
-    const int improve_stability,
     const int use_bounds,
     const fpreal3 ground_pos,
     const fpreal ground_stiffness,
     const fpreal ground_friction,
-    const fpreal friction_epsilon,
+    const fpreal ground_epsilon,
     const fpreal3 ground_normal,
     const fpreal ground_damping
 )
@@ -761,11 +759,10 @@ kernel void solveConstraints(
         switch (constraint_type)
         {
             case MASS_SPRING:
-            default:
             {
                 accumulateMaterialForceAndHessian_MassSpring(&force, hessian, idx, prim_id,
                     _bound_primpoints, _bound_primpoints_index, _bound_primpoints_length,
-                    _bound_P, _bound_stiffness, _bound_restlength, improve_stability);
+                    _bound_P, _bound_stiffness, _bound_restlength);
                 break;
             }
 #if defined(HAS_restmatrix) && defined(HAS_bendstiffness) && defined(HAS_dampingratio) && defined(HAS_benddampingratio)
@@ -795,7 +792,7 @@ kernel void solveConstraints(
     {
         accumulateBoundaryForceAndHessian(
             &force, hessian, P, P - pprevious, ground_pos, normalize(ground_normal),
-            ground_stiffness, ground_damping * DAMPING_SCALE, ground_friction, friction_epsilon, timeinc);
+            ground_stiffness, ground_damping * DAMPING_SCALE, ground_friction, ground_epsilon, timeinc);
     }
     
     // The core of VBD: P += force * invert(hessian)
