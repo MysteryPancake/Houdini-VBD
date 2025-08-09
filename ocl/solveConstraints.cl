@@ -109,9 +109,9 @@ static inline int solveDirect(
         return 0;
     }
     
-    (*out).x = (i0 * force.x + i1 * force.y + i2 * force.z) / det;
-    (*out).y = (-(s8 * s1 - s2 * s7) * force.x +  (s8 * s0 - s2 * s6) * force.y + -(s7 * s0 - s1 * s6) * force.z) / det;
-    (*out).z = ( (s5 * s1 - s2 * s4) * force.x + -(s5 * s0 - s2 * s3) * force.y +  (s4 * s0 - s1 * s3) * force.z) / det;
+    out->x = (i0 * force.x + i1 * force.y + i2 * force.z) / det;
+    out->y = (-(s8 * s1 - s2 * s7) * force.x +  (s8 * s0 - s2 * s6) * force.y + -(s7 * s0 - s1 * s6) * force.z) / det;
+    out->z = ( (s5 * s1 - s2 * s4) * force.x + -(s5 * s0 - s2 * s3) * force.y +  (s4 * s0 - s1 * s3) * force.z) / det;
     return 1;
 }
 
@@ -222,9 +222,9 @@ static inline void assembleForceAndHessian_NeoHookean(
     fpreal3 *force,
     mat3 hessian)
 {
-    (*force).x -= dE_dF[0] * m1 + dE_dF[3] * m2 + dE_dF[6] * m3;
-    (*force).y -= dE_dF[1] * m1 + dE_dF[4] * m2 + dE_dF[7] * m3;
-    (*force).z -= dE_dF[2] * m1 + dE_dF[5] * m2 + dE_dF[8] * m3;
+    force->x -= dE_dF[0] * m1 + dE_dF[3] * m2 + dE_dF[6] * m3;
+    force->y -= dE_dF[1] * m1 + dE_dF[4] * m2 + dE_dF[7] * m3;
+    force->z -= dE_dF[2] * m1 + dE_dF[5] * m2 + dE_dF[8] * m3;
     
     mat9 HL;
     for (int col = 0; col < 9; ++col)
