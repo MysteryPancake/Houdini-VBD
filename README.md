@@ -33,6 +33,7 @@ Thanks to Anka He Chen and Chris Giles for making these open source with permiss
 - [ ] Steal from [AVBD](https://graphics.cs.utah.edu/research/projects/avbd/)
   - [x] [LDLT decomposition](https://graphics.cs.utah.edu/research/projects/avbd/Augmented_VBD-SIGGRAPH25.pdf) to improve speed
   - [x] [SPD hessian approximation (section 3.5)](https://graphics.cs.utah.edu/research/projects/avbd/Augmented_VBD-SIGGRAPH25.pdf) to improve stability
+  - [ ] Rigid body handling
   - [ ] [Hard constraints](https://graphics.cs.utah.edu/research/projects/avbd/Augmented_VBD-SIGGRAPH25.pdf)
 - [ ] Touch grass
 
