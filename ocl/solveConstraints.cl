@@ -27,8 +27,10 @@ static inline fpreal3 _mat32vecmul(const mat32 a, const fpreal2 b)
 
 static inline fpreal2 _mat32Tvecmul(const mat32 a, const fpreal3 b)
 {
-    return (fpreal2)(a[0][0] * b.x + a[1][0] * b.y + a[2][0] * b.z,
-                     a[0][1] * b.x + a[1][1] * b.y + a[2][1] * b.z);
+    return (fpreal2)(
+        dot((fpreal3)(a[0][0], a[1][0], a[2][0]), b),
+        dot((fpreal3)(a[0][1], a[1][1], a[2][1]), b)
+    );
 }
 
 static inline void _mat3adddiag(mat3 mout, const mat3 m, const fpreal x)
@@ -79,14 +81,14 @@ static inline fpreal3 solveLDLT(
 
     // Backward substitution: Solve L^T x = z
     fpreal3 x;
-    x[2] = z3;
-    x[1] = z2 - L32 * x[2];
-    x[0] = z1 - L21 * x[1] - L31 * x[2];
+    x.z = z3;
+    x.y = z2 - L32 * x.z;
+    x.x = z1 - L21 * x.y - L31 * x.z;
 
     return x;
 }
 
-// out = force * invert(hessian) with a check similar to absf(det3(hessian)) > epsilon
+// out = force * invert(hessian) with a check similar to fabs(det3(hessian)) < epsilon
 // From https://github.com/AnkaChan/CuMatrix/blob/main/CuMatrix/MatrixOps/CuMatrix.h#L235
 static inline int solveDirect(
     const fpreal3 force,
@@ -94,24 +96,18 @@ static inline int solveDirect(
     fpreal3 *out,
     const fpreal epsilon)
 {
-    const fpreal s0 = hessian[0][0], s3 = hessian[1][0], s6 = hessian[2][0];
-    const fpreal s1 = hessian[0][1], s4 = hessian[1][1], s7 = hessian[2][1];
-    const fpreal s2 = hessian[0][2], s5 = hessian[1][2], s8 = hessian[2][2];
-    
-    const fpreal i0 = s8 * s4 - s5 * s7;
-    const fpreal i1 = -(s8 * s3 - s5 * s6);
-    const fpreal i2 = s7 * s3 - s4 * s6;
-    
-    const fpreal det = s0 * i0 + s1 * i1 + s2 * i2;
-    if (fabs(det) < epsilon * (fabs(s0 * i0) + fabs(s1 * i1) + fabs(s2 * i2)))
-    {
-        (*out) = force;
-        return 0;
-    }
-    
-    out->x = (i0 * force.x + i1 * force.y + i2 * force.z) / det;
-    out->y = (-(s8 * s1 - s2 * s7) * force.x +  (s8 * s0 - s2 * s6) * force.y + -(s7 * s0 - s1 * s6) * force.z) / det;
-    out->z = ( (s5 * s1 - s2 * s4) * force.x + -(s5 * s0 - s2 * s3) * force.y +  (s4 * s0 - s1 * s3) * force.z) / det;
+    const fpreal3 s0 = hessian[0];
+    const fpreal3 s1 = hessian[1];
+    const fpreal3 s2 = hessian[2];
+
+    const fpreal3 adj0 = cross(s1, s2);
+    const fpreal3 adj1 = cross(s2, s0);
+    const fpreal3 adj2 = cross(s0, s1);
+
+    const fpreal det = dot(s0, adj0);
+    if (fabs(det) < epsilon * (fabs(s0.x * adj0.x) + fabs(s1.x * adj0.y) + fabs(s2.x * adj0.z))) return 0;
+
+    (*out) = (fpreal3)(dot(adj0, force), dot(adj1, force), dot(adj2, force)) / det;
     return 1;
 }
 
@@ -153,17 +149,12 @@ static inline void accumulateInertiaForceAndHessian(
 static inline void spdApproximation(mat3 h)
 {
     // Column norm in the diagonal
-    const fpreal x0 = h[0][0], y0 = h[1][0], z0 = h[2][0];
-    const fpreal x1 = h[0][1], y1 = h[1][1], z1 = h[2][1];
-    const fpreal x2 = h[0][2], y2 = h[1][2], z2 = h[2][2];
-    h[0][0] = sqrt(x0 * x0 + y0 * y0 + z0 * z0);
-    h[1][1] = sqrt(x1 * x1 + y1 * y1 + z1 * z1);
-    h[2][2] = sqrt(x2 * x2 + y2 * y2 + z2 * z2);
+    h[0][0] = length((fpreal3)(h[0][0], h[1][0], h[2][0]));
+    h[1][1] = length((fpreal3)(h[0][1], h[1][1], h[2][1]));
+    h[2][2] = length((fpreal3)(h[0][2], h[1][2], h[2][2]));
 
     // Wipe everything else
-    h[0][1] = 0.0f; h[0][2] = 0.0f;
-    h[1][0] = 0.0f; h[1][2] = 0.0f;
-    h[2][0] = 0.0f; h[2][1] = 0.0f;
+    h[0][1] = h[0][2] = h[1][0] = h[1][2] = h[2][0] = h[2][1] = 0.0f;
 }
 
 // Energy for mass-spring constraints, based on their restlength like XPBD
@@ -193,16 +184,17 @@ static inline void accumulateMaterialForceAndHessian_MassSpring(
     const fpreal stiffness = _bound_stiffness[prim_id] * STIFFNESS_SCALE;
     const fpreal l_ratio = rest / dlen;
     
-    // Mass-spring hessian from TinyVBD, inlined for speed
-    mat3 ms_hessian;
+    // Mass-spring hessian from TinyVBD
     const fpreal3 x_ident = (fpreal3)(1.0f, 0.0f, 0.0f);
     const fpreal3 y_ident = (fpreal3)(0.0f, 1.0f, 0.0f);
     const fpreal3 z_ident = (fpreal3)(0.0f, 0.0f, 1.0f);
-    ms_hessian[0] = stiffness * (x_ident - l_ratio * (x_ident - (d * d.x) / dlen2));
-    ms_hessian[1] = stiffness * (y_ident - l_ratio * (y_ident - (d * d.y) / dlen2));
-    ms_hessian[2] = stiffness * (z_ident - l_ratio * (z_ident - (d * d.z) / dlen2));
+    mat3 ms_hessian = {
+        stiffness * (x_ident - l_ratio * (x_ident - (d * d.x) / dlen2)),
+        stiffness * (y_ident - l_ratio * (y_ident - (d * d.y) / dlen2)),
+        stiffness * (z_ident - l_ratio * (z_ident - (d * d.z) / dlen2))
+    };
     
-    // SPD approximation from AVBD greatly improves stability
+    // SPD approximation from AVBD greatly improves mass-spring
     spdApproximation(ms_hessian);
     
     mat3add(hessian, ms_hessian, hessian);
@@ -225,20 +217,29 @@ static inline void assembleForceAndHessian_NeoHookean(
     force->x -= dE_dF[0] * m1 + dE_dF[3] * m2 + dE_dF[6] * m3;
     force->y -= dE_dF[1] * m1 + dE_dF[4] * m2 + dE_dF[7] * m3;
     force->z -= dE_dF[2] * m1 + dE_dF[5] * m2 + dE_dF[8] * m3;
-    
-    mat9 HL;
-    for (int col = 0; col < 9; ++col)
-    {
-        HL[0][col] = d2E_dF[0][col] * m1 + d2E_dF[3][col] * m2 + d2E_dF[6][col] * m3;
-        HL[1][col] = d2E_dF[1][col] * m1 + d2E_dF[4][col] * m2 + d2E_dF[7][col] * m3;
-        HL[2][col] = d2E_dF[2][col] * m1 + d2E_dF[5][col] * m2 + d2E_dF[8][col] * m3;
-    }
-    
+
+    const fpreal m1sq = m1 * m1;
+    const fpreal m2sq = m2 * m2;
+    const fpreal m3sq = m3 * m3;
+    const fpreal m1m2 = m1 * m2;
+    const fpreal m1m3 = m1 * m3;
+    const fpreal m2m3 = m2 * m3;
+
     for (int row = 0; row < 3; ++row)
     {
-        hessian[row][0] = HL[row][0] * m1 + HL[row][3] * m2 + HL[row][6] * m3;
-        hessian[row][1] = HL[row][1] * m1 + HL[row][4] * m2 + HL[row][7] * m3;
-        hessian[row][2] = HL[row][2] * m1 + HL[row][5] * m2 + HL[row][8] * m3;
+        const fpreal* row0 = d2E_dF[row];
+        const fpreal* row3 = d2E_dF[row + 3];
+        const fpreal* row6 = d2E_dF[row + 6];
+
+        hessian[row][0] = row0[0] * m1sq + row0[3] * m1m2 + row0[6] * m1m3 +
+                          row3[0] * m1m2 + row3[3] * m2sq + row3[6] * m2m3 +
+                          row6[0] * m1m3 + row6[3] * m2m3 + row6[6] * m3sq;
+        hessian[row][1] = row0[1] * m1sq + row0[4] * m1m2 + row0[7] * m1m3 +
+                          row3[1] * m1m2 + row3[4] * m2sq + row3[7] * m2m3 +
+                          row6[1] * m1m3 + row6[4] * m2m3 + row6[7] * m3sq;
+        hessian[row][2] = row0[2] * m1sq + row0[5] * m1m2 + row0[8] * m1m3 +
+                          row3[2] * m1m2 + row3[5] * m2sq + row3[8] * m2m3 +
+                          row6[2] * m1m3 + row6[5] * m2m3 + row6[8] * m3sq;
     }
 }
 
@@ -261,7 +262,8 @@ static inline void accumulateMaterialForceAndHessian_NeoHookean(
     global fpreal *_bound_dampingratio,
     global fpreal *_bound_benddampingratio,
     const fpreal timeinc,
-    const fpreal3 displacement)
+    const fpreal3 displacement,
+    const short use_approximation)
 {
     // Hydrostatic energy stiffness (volume stiffness)
     const fpreal lmbd = _bound_stiffness[prim_id] * STIFFNESS_SCALE;
@@ -297,26 +299,18 @@ static inline void accumulateMaterialForceAndHessian_NeoHookean(
     mat3mul(Ds, Dminv, F);
     
     // This is the wrong order (col major) but only works this way
-    const fpreal F1_1 = F[0][0];
-    const fpreal F1_2 = F[0][1];
-    const fpreal F1_3 = F[0][2];
-    const fpreal F2_1 = F[1][0];
-    const fpreal F2_2 = F[1][1];
-    const fpreal F2_3 = F[1][2];
-    const fpreal F3_1 = F[2][0];
-    const fpreal F3_2 = F[2][1];
-    const fpreal F3_3 = F[2][2];
-    
+    const fpreal3 F1 = F[0];
+    const fpreal3 F2 = F[1];
+    const fpreal3 F3 = F[2];
+
+    const fpreal3 c0 = cross(F2, F3);
+    const fpreal3 c1 = cross(F3, F1);
+    const fpreal3 c2 = cross(F1, F2);
+
     const fpreal9 ddetF_dF = {
-        F2_2 * F3_3 - F2_3 * F3_2,
-        F1_3 * F3_2 - F1_2 * F3_3,
-        F1_2 * F2_3 - F1_3 * F2_2,
-        F2_3 * F3_1 - F2_1 * F3_3,
-        F1_1 * F3_3 - F1_3 * F3_1,
-        F1_3 * F2_1 - F1_1 * F2_3,
-        F2_1 * F3_2 - F2_2 * F3_1,
-        F1_2 * F3_1 - F1_1 * F3_2,
-        F1_1 * F2_2 - F1_2 * F2_1
+        c0.x, c1.x, c2.x,
+        c0.y, c1.y, c2.y,
+        c0.z, c1.z, c2.z
     };
 
     const fpreal k = det3(F) - a;
@@ -350,55 +344,55 @@ static inline void accumulateMaterialForceAndHessian_NeoHookean(
     d2E_dF_dF[3][0] = scale_lmbd * (ddetF_dF[0] * ddetF_dF[3]);
     d2E_dF_dF[0][3] = d2E_dF_dF[3][0];
     
-    d2E_dF_dF[4][0] = scale_lmbd * (ddetF_dF[0] * ddetF_dF[4]) + scale_k * F3_3;
+    d2E_dF_dF[4][0] = scale_lmbd * (ddetF_dF[0] * ddetF_dF[4]) + scale_k * F3.z;
     d2E_dF_dF[0][4] = d2E_dF_dF[4][0];
     
-    d2E_dF_dF[5][0] = scale_lmbd * (ddetF_dF[0] * ddetF_dF[5]) + scale_k * -F2_3;
+    d2E_dF_dF[5][0] = scale_lmbd * (ddetF_dF[0] * ddetF_dF[5]) + scale_k * -F2.z;
     d2E_dF_dF[0][5] = d2E_dF_dF[5][0];
     
     d2E_dF_dF[6][0] = scale_lmbd * (ddetF_dF[0] * ddetF_dF[6]);
     d2E_dF_dF[0][6] = d2E_dF_dF[6][0];
     
-    d2E_dF_dF[7][0] = scale_lmbd * (ddetF_dF[0] * ddetF_dF[7]) + scale_k * -F3_2;
+    d2E_dF_dF[7][0] = scale_lmbd * (ddetF_dF[0] * ddetF_dF[7]) + scale_k * -F3.y;
     d2E_dF_dF[0][7] = d2E_dF_dF[7][0];
     
-    d2E_dF_dF[8][0] = scale_lmbd * (ddetF_dF[0] * ddetF_dF[8]) + scale_k * F2_2;
+    d2E_dF_dF[8][0] = scale_lmbd * (ddetF_dF[0] * ddetF_dF[8]) + scale_k * F2.y;
     d2E_dF_dF[0][8] = d2E_dF_dF[8][0];
     
     d2E_dF_dF[2][1] = scale_lmbd * (ddetF_dF[1] * ddetF_dF[2]);
     d2E_dF_dF[1][2] = d2E_dF_dF[2][1];
     
-    d2E_dF_dF[3][1] = scale_lmbd * (ddetF_dF[1] * ddetF_dF[3]) + scale_k * -F3_3;
+    d2E_dF_dF[3][1] = scale_lmbd * (ddetF_dF[1] * ddetF_dF[3]) + scale_k * -F3.z;
     d2E_dF_dF[1][3] = d2E_dF_dF[3][1];
     
     d2E_dF_dF[4][1] = scale_lmbd * (ddetF_dF[1] * ddetF_dF[4]);
     d2E_dF_dF[1][4] = d2E_dF_dF[4][1];
     
-    d2E_dF_dF[5][1] = scale_lmbd * (ddetF_dF[1] * ddetF_dF[5]) + scale_k * F1_3;
+    d2E_dF_dF[5][1] = scale_lmbd * (ddetF_dF[1] * ddetF_dF[5]) + scale_k * F1.z;
     d2E_dF_dF[1][5] = d2E_dF_dF[5][1];
     
-    d2E_dF_dF[6][1] = scale_lmbd * (ddetF_dF[1] * ddetF_dF[6]) + scale_k * F3_2;
+    d2E_dF_dF[6][1] = scale_lmbd * (ddetF_dF[1] * ddetF_dF[6]) + scale_k * F3.y;
     d2E_dF_dF[1][6] = d2E_dF_dF[6][1];
     
     d2E_dF_dF[7][1] = scale_lmbd * (ddetF_dF[1] * ddetF_dF[7]);
     d2E_dF_dF[1][7] = d2E_dF_dF[7][1];
     
-    d2E_dF_dF[8][1] = scale_lmbd * (ddetF_dF[1] * ddetF_dF[8]) + scale_k * -F1_2;
+    d2E_dF_dF[8][1] = scale_lmbd * (ddetF_dF[1] * ddetF_dF[8]) + scale_k * -F1.y;
     d2E_dF_dF[1][8] = d2E_dF_dF[8][1];
     
-    d2E_dF_dF[3][2] = scale_lmbd * (ddetF_dF[2] * ddetF_dF[3]) + scale_k * F2_3;
+    d2E_dF_dF[3][2] = scale_lmbd * (ddetF_dF[2] * ddetF_dF[3]) + scale_k * F2.z;
     d2E_dF_dF[2][3] = d2E_dF_dF[3][2];
     
-    d2E_dF_dF[4][2] = scale_lmbd * (ddetF_dF[2] * ddetF_dF[4]) + scale_k * -F1_3;
+    d2E_dF_dF[4][2] = scale_lmbd * (ddetF_dF[2] * ddetF_dF[4]) + scale_k * -F1.z;
     d2E_dF_dF[2][4] = d2E_dF_dF[4][2];
     
     d2E_dF_dF[5][2] = scale_lmbd * (ddetF_dF[2] * ddetF_dF[5]);
     d2E_dF_dF[2][5] = d2E_dF_dF[5][2];
     
-    d2E_dF_dF[6][2] = scale_lmbd * (ddetF_dF[2] * ddetF_dF[6]) + scale_k * -F2_2;
+    d2E_dF_dF[6][2] = scale_lmbd * (ddetF_dF[2] * ddetF_dF[6]) + scale_k * -F2.y;
     d2E_dF_dF[2][6] = d2E_dF_dF[6][2];
     
-    d2E_dF_dF[7][2] = scale_lmbd * (ddetF_dF[2] * ddetF_dF[7]) + scale_k * F1_2;
+    d2E_dF_dF[7][2] = scale_lmbd * (ddetF_dF[2] * ddetF_dF[7]) + scale_k * F1.y;
     d2E_dF_dF[2][7] = d2E_dF_dF[7][2];
     
     d2E_dF_dF[8][2] = scale_lmbd * (ddetF_dF[2] * ddetF_dF[8]);
@@ -413,28 +407,28 @@ static inline void accumulateMaterialForceAndHessian_NeoHookean(
     d2E_dF_dF[6][3] = scale_lmbd * (ddetF_dF[3] * ddetF_dF[6]);
     d2E_dF_dF[3][6] = d2E_dF_dF[6][3];
     
-    d2E_dF_dF[7][3] = scale_lmbd * (ddetF_dF[3] * ddetF_dF[7]) + scale_k * F3_1;
+    d2E_dF_dF[7][3] = scale_lmbd * (ddetF_dF[3] * ddetF_dF[7]) + scale_k * F3.x;
     d2E_dF_dF[3][7] = d2E_dF_dF[7][3];
     
-    d2E_dF_dF[8][3] = scale_lmbd * (ddetF_dF[3] * ddetF_dF[8]) + scale_k * -F2_1;
+    d2E_dF_dF[8][3] = scale_lmbd * (ddetF_dF[3] * ddetF_dF[8]) + scale_k * -F2.x;
     d2E_dF_dF[3][8] = d2E_dF_dF[8][3];
     
     d2E_dF_dF[5][4] = scale_lmbd * (ddetF_dF[4] * ddetF_dF[5]);
     d2E_dF_dF[4][5] = d2E_dF_dF[5][4];
     
-    d2E_dF_dF[6][4] = scale_lmbd * (ddetF_dF[4] * ddetF_dF[6]) + scale_k * -F3_1;
+    d2E_dF_dF[6][4] = scale_lmbd * (ddetF_dF[4] * ddetF_dF[6]) + scale_k * -F3.x;
     d2E_dF_dF[4][6] = d2E_dF_dF[6][4];
     
     d2E_dF_dF[7][4] = scale_lmbd * (ddetF_dF[4] * ddetF_dF[7]);
     d2E_dF_dF[4][7] = d2E_dF_dF[7][4];
     
-    d2E_dF_dF[8][4] = scale_lmbd * (ddetF_dF[4] * ddetF_dF[8]) + scale_k * F1_1;
+    d2E_dF_dF[8][4] = scale_lmbd * (ddetF_dF[4] * ddetF_dF[8]) + scale_k * F1.x;
     d2E_dF_dF[4][8] = d2E_dF_dF[8][4];
     
-    d2E_dF_dF[6][5] = scale_lmbd * (ddetF_dF[5] * ddetF_dF[6]) + scale_k * F2_1;
+    d2E_dF_dF[6][5] = scale_lmbd * (ddetF_dF[5] * ddetF_dF[6]) + scale_k * F2.x;
     d2E_dF_dF[5][6] = d2E_dF_dF[6][5];
     
-    d2E_dF_dF[7][5] = scale_lmbd * (ddetF_dF[5] * ddetF_dF[7]) + scale_k * -F1_1;
+    d2E_dF_dF[7][5] = scale_lmbd * (ddetF_dF[5] * ddetF_dF[7]) + scale_k * -F1.x;
     d2E_dF_dF[5][7] = d2E_dF_dF[7][5];
     
     d2E_dF_dF[8][5] = scale_lmbd * (ddetF_dF[5] * ddetF_dF[8]);
@@ -492,6 +486,9 @@ static inline void accumulateMaterialForceAndHessian_NeoHookean(
     mat3 d2E_dxi_dxi;
     assembleForceAndHessian_NeoHookean(dE_dF, d2E_dF_dF, m1, m2, m3, force, d2E_dxi_dxi);
     
+    // SPD approximation causes smearing for neo-hookean, so it's disabled by default
+    if (use_approximation) spdApproximation(d2E_dxi_dxi);
+
     // Damping doesn't work well, but there's a few definitions for it in GAIA
     // This one is from https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBDPhysicsCompute.cu#L2198
     if (lmbd_damping > 0.0f || miu_damping > 0.0f)
@@ -680,13 +677,14 @@ kernel void solveConstraints(
     int _bound_pprevious_length,
     global fpreal * restrict _bound_pprevious,
     const fpreal damping,
-    const int use_bounds,
+    const short use_bounds,
     const fpreal3 ground_pos,
     const fpreal ground_stiffness,
     const fpreal ground_friction,
     const fpreal ground_epsilon,
     const fpreal3 ground_normal,
-    const fpreal ground_damping
+    const fpreal ground_damping,
+    const short approximate_neohookean
 )
 {
     // Like Vellum, everything here is based on timeinc
@@ -772,7 +770,7 @@ kernel void solveConstraints(
                     _bound_primpoints, _bound_primpoints_index, _bound_primpoints_length,
                     _bound_P, _bound_pprevious, _bound_restlength, _bound_restmatrix,
                     _bound_stiffness, _bound_bendstiffness, _bound_dampingratio,
-                    _bound_benddampingratio, timeinc, P - pprevious);
+                    _bound_benddampingratio, timeinc, P - pprevious, approximate_neohookean);
                 break;
             }
 #endif
