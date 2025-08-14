@@ -16,31 +16,37 @@
     @pprevious.set(@P);
     
     // First order integration, same as Vellum
+    @v.set(@v + @gravity * @TimeInc);
     const fpreal3 inertia = @P + @v * @TimeInc;
-    const fpreal3 gravity = @gravity * @TimeInc * @TimeInc;
-    @inertia.set(inertia + gravity);
+    @inertia.set(inertia);
     
     switch (@initialization)
     {
-        case 0: // Inertia and acceleration
-        default:
+        case 0: // Inertia
         {
-            @P.set(inertia + gravity);
+            @P.set(@P + @vprevious * @TimeInc);
             break;
         }
-        case 1: // Adaptive warmstart, this has bizarre issues with gravity reduction depending on mass
+        case 1: // Inertia and acceleration
+        default:
+        {
+            @P.set(inertia);
+            break;
+        }
+        case 2: // Adaptive warmstart, this has bizarre issues with gravity reduction depending on mass
         {
             if (@SimFrame <= 2)
             {
                 // We don't have @vprevious, use inertia and acceleration
-                @P.set(inertia + gravity);
+                @P.set(inertia);
             }
             else
             {
                 const fpreal3 accel = (@v - @vprevious) / @TimeInc;
                 const fpreal gravNorm = length(@gravity);
-                const fpreal accelWeight = clamp(dot(accel, @gravity / gravNorm) / gravNorm, 0.0f, 1.0f);
-                @P.set(inertia + gravity * accelWeight);
+                const fpreal3 gravDir = @gravity / gravNorm;
+                const fpreal accelWeight = clamp(dot(accel, gravDir) / gravNorm, 0.0f, 1.0f);
+                @P.set(@P + @vprevious * @TimeInc + @gravity * accelWeight * @TimeInc * @TimeInc);
             }
             break;
         }
