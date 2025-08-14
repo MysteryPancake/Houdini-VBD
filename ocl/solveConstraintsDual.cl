@@ -15,6 +15,7 @@
 #bind prim fmax fpreal geo=ConstraintGeometry
 
 // Shared with solveConstraints.cl
+// From https://github.com/savant117/avbd-demo2d/blob/main/source/spring.cpp#L22
 static inline fpreal computeConstraint_SpringAVBD(
     const int prim_id,
     global fpreal *_bound_P,
