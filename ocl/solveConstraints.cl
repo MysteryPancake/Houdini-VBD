@@ -190,9 +190,9 @@ static inline void solveAVBD(
     mat3add(hessian, H, hessian);
 }
 
-// Energy for mass-spring constraints, as used by AVBD
+// Energy for spring constraints from AVBD
 // Should really be merged with the VBD mass-spring constraints
-static inline void accumulateMaterialForceAndHessian_MassSpringAVBD(
+static inline void accumulateMaterialForceAndHessian_SpringAVBD(
     fpreal3 *force,
     mat3 hessian,
     const int idx,
@@ -230,7 +230,7 @@ static inline void accumulateMaterialForceAndHessian_MassSpringAVBD(
     const fpreal3 n = d / dlen;
 
     // AVBD uses both a jacobian (first derivative) and a hessian (second derivative)
-    // Below is inlined (I - outer(n, n) / dlen2) / dlen;
+    // Below is inlined (I - outer(n, n) / dlen2) / dlen
     mat3 H = {
         ((fpreal3)(1.0f, 0.0f, 0.0f) - (n * n.x) / dlen2) / dlen,
         ((fpreal3)(0.0f, 1.0f, 0.0f) - (n * n.y) / dlen2) / dlen,
@@ -868,7 +868,7 @@ kernel void solveConstraints(
 #if defined(HAS_lambda) && defined(HAS_penalty) && defined(HAS_fmin) && defined(HAS_fmax)
             case AVBD_SPRING:
             {
-                accumulateMaterialForceAndHessian_MassSpringAVBD(&force, hessian, idx, prim_id,
+                accumulateMaterialForceAndHessian_SpringAVBD(&force, hessian, idx, prim_id,
                     _bound_primpoints, _bound_primpoints_index, _bound_primpoints_length,
                     _bound_P, _bound_stiffness, _bound_restlength, _bound_lambda, _bound_penalty,
                     _bound_fmin, _bound_fmax);
