@@ -33,8 +33,10 @@ Thanks to Anka He Chen and Chris Giles for making these open source with permiss
   - [x] [LDLT decomposition](https://graphics.cs.utah.edu/research/projects/avbd/Augmented_VBD-SIGGRAPH25.pdf) to improve speed
   - [x] [SPD hessian approximation (section 3.5)](https://graphics.cs.utah.edu/research/projects/avbd/Augmented_VBD-SIGGRAPH25.pdf) to improve stability
   - [x] Dual constraint updates (points and forces)
-  - [ ] Rigid body handling
-  - [ ] [Hard constraints](https://graphics.cs.utah.edu/research/projects/avbd/Augmented_VBD-SIGGRAPH25.pdf)
+  - [x] Spring constraints
+  - [ ] Hinge constraints
+  - [ ] Motor constraints
+  - [ ] Rigid body support
 - [ ] Steal from myself
   - [ ] SDF collisions
 - [ ] Touch grass
