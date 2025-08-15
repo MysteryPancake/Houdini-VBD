@@ -1,11 +1,11 @@
-# Houdini Vertex Block Descent
+# Houdini Augmented Vertex Block Descent
 
 | <img src="./images/demo.webp"> | <img src="./images/demo2.webp"> |
 | --- | --- |
 | <img src="./images/massspring.png"> | <img src="./images/neohookean.png"> |
 
 
-WIP of Vertex Block Descent (VBD) in Houdini. It runs natively without plugins, as god intended.
+WIP of Augmented Vertex Block Descent (AVBD) in Houdini. It runs natively without plugins, as god intended.
 
 There's an OpenCL version for performance, and an old VEX version to show how it works. Both are included in the HIP files.
 
@@ -32,7 +32,7 @@ Thanks to Anka He Chen and Chris Giles for making these open source with permiss
 - [ ] Steal from [AVBD](https://graphics.cs.utah.edu/research/projects/avbd/)
   - [x] [LDLT decomposition](https://graphics.cs.utah.edu/research/projects/avbd/Augmented_VBD-SIGGRAPH25.pdf) to improve speed
   - [x] [SPD hessian approximation (section 3.5)](https://graphics.cs.utah.edu/research/projects/avbd/Augmented_VBD-SIGGRAPH25.pdf) to improve stability
-  - [ ] Dual constraint updates (points and forces)
+  - [x] Dual constraint updates (points and forces)
   - [ ] Rigid body handling
   - [ ] [Hard constraints](https://graphics.cs.utah.edu/research/projects/avbd/Augmented_VBD-SIGGRAPH25.pdf)
 - [ ] Steal from myself
