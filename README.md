@@ -32,10 +32,10 @@ Thanks to Anka He Chen and Chris Giles for making these open source with permiss
 - [ ] Steal from [AVBD](https://graphics.cs.utah.edu/research/projects/avbd/)
   - [x] [LDLT decomposition](https://graphics.cs.utah.edu/research/projects/avbd/Augmented_VBD-SIGGRAPH25.pdf) to improve speed
   - [x] [SPD hessian approximation (section 3.5)](https://graphics.cs.utah.edu/research/projects/avbd/Augmented_VBD-SIGGRAPH25.pdf) to improve stability
-  - [x] Dual constraint updates (points and forces)
-  - [x] Spring constraints
-  - [ ] Hinge constraints
-  - [ ] Motor constraints
+  - [x] Dual constraint updating (2x slower so disabled by default)
+  - [x] [Spring constraints](https://github.com/savant117/avbd-demo2d/blob/main/source/spring.cpp)
+  - [ ] [Joint constraints](https://github.com/savant117/avbd-demo2d/blob/main/source/joint.cpp)
+  - [ ] [Motor constraints](https://github.com/savant117/avbd-demo2d/blob/main/source/motor.cpp)
   - [ ] Rigid body support
 - [ ] Steal from myself
   - [ ] SDF collisions
