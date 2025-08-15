@@ -10,6 +10,10 @@
 #bind prim stiffness fpreal geo=ConstraintGeometry
 #bind prim type_hash int geo=ConstraintGeometry
 
+// Rough approximation to match Vellum
+// Shared with solveConstraints.cl
+const fpreal STIFFNESS_SCALE = 10.0f;
+
 // Dual update from AVBD
 // From https://github.com/savant117/avbd-demo2d/blob/main/source/solver.cpp#L105
 @KERNEL
@@ -23,5 +27,5 @@
     
     // If it's not a hard constraint, we don't let the penalty exceed the material stiffness
     const fpreal penalty = clamp(@penalty * @gamma, @PENALTY_MIN, @PENALTY_MAX);
-    @penalty.set(min(penalty, @stiffness));
+    @penalty.set(min(penalty, @stiffness * STIFFNESS_SCALE));
 }

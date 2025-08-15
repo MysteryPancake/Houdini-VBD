@@ -14,6 +14,10 @@
 #bind prim fmin fpreal geo=ConstraintGeometry
 #bind prim fmax fpreal geo=ConstraintGeometry
 
+// Rough approximation to match Vellum
+// Shared with solveConstraints.cl
+const fpreal STIFFNESS_SCALE = 10.0f;
+
 // Shared with solveConstraints.cl
 // From https://github.com/savant117/avbd-demo2d/blob/main/source/spring.cpp#L22
 static inline fpreal computeConstraint_SpringAVBD(
@@ -63,6 +67,6 @@ static inline fpreal computeConstraint_SpringAVBD(
     // Update the penalty parameter and clamp to material stiffness if we are within the force bounds (Eq. 16)
     if (lambda > @fmin && lambda < @fmax)
     {
-        @penalty.set(min(@penalty + @beta * fabs(C), min(@PENALTY_MAX, @stiffness)));
+        @penalty.set(min(@penalty + @beta * fabs(C), min(@PENALTY_MAX, @stiffness * STIFFNESS_SCALE)));
     }
 }

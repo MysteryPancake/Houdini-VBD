@@ -215,7 +215,7 @@ static inline void accumulateMaterialForceAndHessian_SpringAVBD(
     const fpreal3 p1 = vload3(pt1, _bound_P);
     
     const fpreal rest = _bound_restlength[prim_id];
-    const fpreal stiffness = _bound_stiffness[prim_id];
+    const fpreal stiffness = _bound_stiffness[prim_id] * STIFFNESS_SCALE;
     const fpreal lambda = _bound_lambda[prim_id];
     const fpreal penalty = _bound_penalty[prim_id];
     const fpreal fmin = _bound_fmin[prim_id];
