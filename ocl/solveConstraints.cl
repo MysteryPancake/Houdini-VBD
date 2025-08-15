@@ -159,7 +159,7 @@ static inline void spdApproximation(mat3 h)
 }
 
 // From https://github.com/savant117/avbd-demo2d/blob/main/source/solver.cpp#L179
-static inline void solveAVBD(
+static inline void accumulateAVBD(
     fpreal3 *force,
     mat3 hessian,
     mat3 H, // Hessian (2nd derivative)
@@ -215,7 +215,7 @@ static inline void accumulateMaterialForceAndHessian_SpringAVBD(
     const fpreal3 p1 = vload3(pt1, _bound_P);
     
     const fpreal rest = _bound_restlength[prim_id];
-    const fpreal stiffness = _bound_stiffness[prim_id] * STIFFNESS_SCALE;
+    const fpreal stiffness = _bound_stiffness[prim_id];
     const fpreal lambda = _bound_lambda[prim_id];
     const fpreal penalty = _bound_penalty[prim_id];
     const fpreal fmin = _bound_fmin[prim_id];
@@ -238,7 +238,7 @@ static inline void accumulateMaterialForceAndHessian_SpringAVBD(
     };
     const fpreal3 J = pt0 == idx ? n : -n;
 
-    solveAVBD(force, hessian, H, J, C, stiffness, lambda, penalty, fmin, fmax);
+    accumulateAVBD(force, hessian, H, J, C, stiffness, lambda, penalty, fmin, fmax);
 }
 
 // Energy for mass-spring constraints, based on their restlength like XPBD
@@ -348,8 +348,7 @@ static inline void accumulateMaterialForceAndHessian_NeoHookean(
     global fpreal *_bound_dampingratio,
     global fpreal *_bound_benddampingratio,
     const fpreal timeinc,
-    const fpreal3 displacement,
-    const short use_approximation)
+    const fpreal3 displacement)
 {
     // Hydrostatic energy stiffness (volume stiffness)
     const fpreal lmbd = _bound_stiffness[prim_id] * STIFFNESS_SCALE;
@@ -571,9 +570,11 @@ static inline void accumulateMaterialForceAndHessian_NeoHookean(
     // Store the hessian here for damping
     mat3 d2E_dxi_dxi;
     assembleForceAndHessian_NeoHookean(dE_dF, d2E_dF_dF, m1, m2, m3, force, d2E_dxi_dxi);
-    
+
+#if approximate_neohookean
     // SPD approximation causes smearing for neo-hookean, so it's disabled by default
-    if (use_approximation) spdApproximation(d2E_dxi_dxi);
+    spdApproximation(d2E_dxi_dxi);
+#endif
 
     // Damping doesn't work well, but there's a few definitions for it in GAIA
     // This one is from https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBDPhysicsCompute.cu#L2198
@@ -763,30 +764,28 @@ kernel void solveConstraints(
     int _bound_pprevious_length,
     global fpreal * restrict _bound_pprevious,
     const fpreal damping,
-    const short use_bounds,
     const fpreal3 ground_pos,
     const fpreal ground_stiffness,
     const fpreal ground_friction,
     const fpreal ground_epsilon,
     const fpreal3 ground_normal,
-    const fpreal ground_damping,
+    const fpreal ground_damping
 #ifdef HAS_lambda
-    int _bound_lambda_length,
-    global fpreal * restrict _bound_lambda,
+    , int _bound_lambda_length,
+    global fpreal * restrict _bound_lambda
 #endif
 #ifdef HAS_penalty
-    int _bound_penalty_length,
-    global fpreal * restrict _bound_penalty,
+    , int _bound_penalty_length,
+    global fpreal * restrict _bound_penalty
 #endif
 #ifdef HAS_fmin
-    int _bound_fmin_length,
-    global fpreal * restrict _bound_fmin,
+    , int _bound_fmin_length,
+    global fpreal * restrict _bound_fmin
 #endif
 #ifdef HAS_fmax
-    int _bound_fmax_length,
-    global fpreal * restrict _bound_fmax,
+    , int _bound_fmax_length,
+    global fpreal * restrict _bound_fmax
 #endif
-    const short approximate_neohookean
 )
 {
     // Like Vellum, everything here is based on timeinc
@@ -882,7 +881,7 @@ kernel void solveConstraints(
                     _bound_primpoints, _bound_primpoints_index, _bound_primpoints_length,
                     _bound_P, _bound_pprevious, _bound_restlength, _bound_restmatrix,
                     _bound_stiffness, _bound_bendstiffness, _bound_dampingratio,
-                    _bound_benddampingratio, timeinc, P - pprevious, approximate_neohookean);
+                    _bound_benddampingratio, timeinc, P - pprevious);
                 break;
             }
 #endif
@@ -898,12 +897,14 @@ kernel void solveConstraints(
             timeinc, K, damping * timeinc * DAMPING_SCALE);
     }
     
-    if (use_bounds && ground_stiffness > 0.0f)
+#if use_bounds
+    if (ground_stiffness > 0.0f)
     {
         accumulateBoundaryForceAndHessian(
             &force, hessian, P, P - pprevious, ground_pos, normalize(ground_normal),
             ground_stiffness, ground_damping * DAMPING_SCALE, ground_friction, ground_epsilon, timeinc);
     }
+#endif
     
     // The core of VBD: P += force * invert(hessian)
     // Sadly invert(hessian) is mega unstable, so we bandaid it below

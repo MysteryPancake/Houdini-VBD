@@ -20,37 +20,28 @@
     const fpreal3 inertia = @P + @v * @TimeInc;
     @inertia.set(inertia);
     
-    switch (@initialization)
+#if initialization == 0
+    // Inertia
+    @P.set(@P + @vprevious * @TimeInc);
+#elif initialization == 1
+    // Inertia and acceleration
+    @P.set(inertia);
+#elif initialization == 2
+    // Adaptive
+    if (@SimFrame <= 2)
     {
-        case 0: // Inertia
-        {
-            @P.set(@P + @vprevious * @TimeInc);
-            break;
-        }
-        case 1: // Inertia and acceleration
-        default:
-        {
-            @P.set(inertia);
-            break;
-        }
-        case 2: // Adaptive warmstart, this has bizarre issues with gravity reduction depending on mass
-        {
-            if (@SimFrame <= 2)
-            {
-                // We don't have @vprevious, use inertia and acceleration
-                @P.set(inertia);
-            }
-            else
-            {
-                const fpreal3 accel = (@v - @vprevious) / @TimeInc;
-                const fpreal gravNorm = length(@gravity);
-                const fpreal3 gravDir = @gravity / gravNorm;
-                const fpreal accelWeight = clamp(dot(accel, gravDir) / gravNorm, 0.0f, 1.0f);
-                @P.set(@P + @vprevious * @TimeInc + @gravity * accelWeight * @TimeInc * @TimeInc);
-            }
-            break;
-        }
+        // We don't have @vprevious, use inertia and acceleration
+        @P.set(inertia);
     }
+    else
+    {
+        const fpreal3 accel = (@v - @vprevious) / @TimeInc;
+        const fpreal gravNorm = length(@gravity);
+        const fpreal3 gravDir = @gravity / gravNorm;
+        const fpreal accelWeight = clamp(dot(accel, gravDir) / gravNorm, 0.0f, 1.0f);
+        @P.set(@P + @vprevious * @TimeInc + @gravity * accelWeight * @TimeInc * @TimeInc);
+    }
+#endif
 
 #ifdef HAS_omega
     // Used for accelerated convergence, tends to explode so it's disabled by default
