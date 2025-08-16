@@ -304,7 +304,9 @@ static inline void accumulateMaterialForceAndHessian_MassSpring(
     const int _bound_primpoints_length,
     global fpreal *_bound_P,
     global fpreal* _bound_stiffness,
-    global fpreal *_bound_restlength)
+    global fpreal *_bound_restlength,
+    global int *_bound_broken,
+    global fpreal *_bound_breakthreshold)
 {
     // Get the edge's first 2 points, assuming one point is us
     const int pt0 = compAt(_bound_primpoints, prim_id, 0);
@@ -337,7 +339,15 @@ static inline void accumulateMaterialForceAndHessian_MassSpring(
     mat3add(hessian, ms_hessian, hessian);
     
     // Mass-spring force gradient from TinyVBD
-    (*force) += (stiffness * (restlength - dlen) / dlen) * d * (pt0 == idx ? 1 : -1);
+    const fpreal stretch = (dlen - restlength) / dlen;
+    (*force) -= stiffness * stretch * d * (pt0 == idx ? 1 : -1);
+    
+    // Remove the constraint if it exceeds the fracture threshold
+    const fpreal breakthreshold = _bound_breakthreshold[prim_id];
+    if (breakthreshold >= 0.0f && fabs(stretch) > breakthreshold)
+    {
+        _bound_broken[prim_id] = 1;
+    }
 }
 
 // For neo-hookean constraints, turn the 9x9 deformation gradient into a 3x3 hessian
@@ -884,7 +894,7 @@ kernel void solveConstraints(
             {
                 accumulateMaterialForceAndHessian_MassSpring(&force, hessian, idx, prim_id,
                     _bound_primpoints, _bound_primpoints_index, _bound_primpoints_length,
-                    _bound_P, _bound_stiffness, _bound_restlength);
+                    _bound_P, _bound_stiffness, _bound_restlength, _bound_broken, _bound_breakthreshold);
                 break;
             }
             case AVBD_SPRING:
