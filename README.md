@@ -1,9 +1,9 @@
 # Houdini Augmented Vertex Block Descent
 
-| <img src="./images/demo.webp"> | <img src="./images/demo2.webp"> | <img src="./images/avbd_dual.webp"> |
-| --- | --- | --- |
-| <img src="./images/massspring.png"> | <img src="./images/neohookean.png"> | <img src="./images/avbd_dual.png"> |
-
+<img src="./images/demo.webp" height="250px"></img>
+<img src="./images/demo2.webp" height="250px"></img>
+<img src="./images/avbd_dual.webp" height="250px"></img>
+<img src="./images/breaking.webp" height="250px"></img>
 
 WIP of Augmented Vertex Block Descent (AVBD) in Houdini. It runs natively without plugins, as god intended.
 
