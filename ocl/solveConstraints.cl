@@ -190,6 +190,44 @@ static inline void accumulateAVBD(
     mat3add(hessian, H, hessian);
 }
 
+// From https://github.com/savant117/avbd-demo2d/blob/main/source/solver.cpp#L205
+static inline void dualUpdateAVBD(
+    global fpreal *_bound_lambda,
+    global fpreal *_bound_penalty,
+    global int *_bound_broken,
+    global fpreal *_bound_breakthreshold,
+    const int prim_id,
+    const fpreal stiffness,
+    const fpreal lambda,
+    const fpreal penalty,
+    const fpreal C,
+    const fpreal fmin,
+    const fpreal fmax,
+    const fpreal beta,
+    const fpreal PENALTY_MAX)
+{
+    // Use lambda as 0 if it's not a hard constraint
+    fpreal tmp_lambda = isinf(stiffness) ? lambda : 0.0f;
+    
+    // Update lambda (Eq 11)
+    tmp_lambda = clamp(penalty * C + tmp_lambda, fmin, fmax);
+    _bound_lambda[prim_id] = tmp_lambda;
+    
+    // Remove the constraint if it exceeds the fracture threshold
+    const fpreal breakthreshold = _bound_breakthreshold[prim_id];
+    if (breakthreshold >= 0.0f && fabs(tmp_lambda) >= breakthreshold)
+    {
+        _bound_broken[prim_id] = 1;
+    }
+    
+    // Update the penalty parameter and clamp to material stiffness if we are within the force bounds (Eq. 16)
+    if (tmp_lambda > fmin && tmp_lambda < fmax)
+    {
+        // Assumes the stiffness has already been scaled by STIFFNESS_SCALE
+        _bound_penalty[prim_id] = min(penalty + beta * fabs(C), min(PENALTY_MAX, stiffness));
+    }
+}
+
 // Energy for spring constraints from AVBD
 // Should really be merged with the VBD mass-spring constraints
 static inline void accumulateMaterialForceAndHessian_SpringAVBD(
@@ -206,7 +244,11 @@ static inline void accumulateMaterialForceAndHessian_SpringAVBD(
     global fpreal *_bound_lambda,
     global fpreal *_bound_penalty,
     global fpreal *_bound_fmin,
-    global fpreal *_bound_fmax)
+    global fpreal *_bound_fmax,
+    global int *_bound_broken,
+    global fpreal *_bound_breakthreshold,
+    const fpreal beta,
+    const fpreal PENALTY_MAX)
 {
     const int pt0 = compAt(_bound_primpoints, prim_id, 0);
     const int pt1 = compAt(_bound_primpoints, prim_id, 1);
@@ -240,8 +282,14 @@ static inline void accumulateMaterialForceAndHessian_SpringAVBD(
     // AVBD also uses a jacobian (1st derivative)
     // VBD constraints should probably be updated to use a jacobian too
     const fpreal3 J = pt0 == idx ? n : -n;
-
+    
     accumulateAVBD(force, hessian, H, J, C, stiffness, lambda, penalty, fmin, fmax);
+    
+    // Dual update to improve stiffness
+    // Originally this ran in a prim kernel, but putting it here made no difference
+    // It's 2x-3x faster to run it here, the difference is C is less correct
+    dualUpdateAVBD(_bound_lambda, _bound_penalty, _bound_broken, _bound_breakthreshold, prim_id,
+        stiffness, lambda, penalty, C, fmin, fmax, beta, PENALTY_MAX);
 }
 
 // Energy for mass-spring constraints, based on their restlength like XPBD
@@ -767,23 +815,21 @@ kernel void solveConstraints(
     const fpreal ground_friction,
     const fpreal ground_epsilon,
     const fpreal3 ground_normal,
-    const fpreal ground_damping
-#ifdef HAS_lambda
-    , int _bound_lambda_length,
-    global fpreal * restrict _bound_lambda
-#endif
-#ifdef HAS_penalty
-    , int _bound_penalty_length,
-    global fpreal * restrict _bound_penalty
-#endif
-#ifdef HAS_fmin
-    , int _bound_fmin_length,
-    global fpreal * restrict _bound_fmin
-#endif
-#ifdef HAS_fmax
-    , int _bound_fmax_length,
-    global fpreal * restrict _bound_fmax
-#endif
+    const fpreal ground_damping,
+    int _bound_lambda_length,
+    global fpreal * restrict _bound_lambda,
+    int _bound_penalty_length,
+    global fpreal * restrict _bound_penalty,
+    int _bound_fmin_length,
+    global fpreal * restrict _bound_fmin,
+    int _bound_fmax_length,
+    global fpreal * restrict _bound_fmax,
+    int _bound_broken_length,
+    global int * restrict _bound_broken,
+    int _bound_breakthreshold_length,
+    global fpreal * restrict _bound_breakthreshold,
+    const fpreal beta,
+    const fpreal PENALTY_MAX
 )
 {
     // Like Vellum, everything here is based on timeinc
@@ -841,16 +887,14 @@ kernel void solveConstraints(
                     _bound_P, _bound_stiffness, _bound_restlength);
                 break;
             }
-#if defined(HAS_lambda) && defined(HAS_penalty) && defined(HAS_fmin) && defined(HAS_fmax)
             case AVBD_SPRING:
             {
                 accumulateMaterialForceAndHessian_SpringAVBD(&force, hessian, idx, prim_id,
                     _bound_primpoints, _bound_primpoints_index, _bound_primpoints_length,
                     _bound_P, _bound_stiffness, _bound_restlength, _bound_lambda, _bound_penalty,
-                    _bound_fmin, _bound_fmax);
+                    _bound_fmin, _bound_fmax, _bound_broken, _bound_breakthreshold, beta, PENALTY_MAX);
                 break;
             }
-#endif
 #if defined(HAS_restmatrix) && defined(HAS_bendstiffness) && defined(HAS_dampingratio) && defined(HAS_benddampingratio)
             case VBD_NEO_HOOKEAN:
             {
