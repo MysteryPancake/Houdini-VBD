@@ -1,7 +1,8 @@
 #bind point P fpreal3
-#bind point &conP name=P geo=ConstraintGeometry fpreal3
+#bind point coloredidx int geo=ConstraintGeometry
+#bind point &Pcom fpreal3 name=P geo=ConstraintGeometry
 
 @KERNEL
 {
-    @conP.set(@P);
+    @Pcon.set(@P.getAt(@coloredidx));
 }

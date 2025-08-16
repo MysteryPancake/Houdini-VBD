@@ -5,6 +5,8 @@
 #bind parm PENALTY_MAX fpreal
 
 #bind point P fpreal3
+#bind prim &broken int geo=ConstraintGeometry name=group:broken
+#bind prim breakthreshold fpreal geo=ConstraintGeometry
 #bind prim &lambda fpreal geo=ConstraintGeometry
 #bind prim &penalty fpreal geo=ConstraintGeometry
 #bind prim restlength fpreal geo=ConstraintGeometry
@@ -43,7 +45,7 @@ static inline fpreal computeConstraint_SpringAVBD(
 @KERNEL
 {
     // Skip non AVBD constraints
-    if (@type_hash != AVBD_SPRING) return;
+    if (@type_hash != AVBD_SPRING || @broken) return;
 
     fpreal C = 0.0f;
     switch (@type_hash)
@@ -64,8 +66,11 @@ static inline fpreal computeConstraint_SpringAVBD(
     lambda = clamp(@penalty * C + lambda, @fmin, @fmax);
     @lambda.set(lambda);
     
-    // TODO: Remove the constraint if it exceeds the fracture threshold
-    // @group_broken = fabs(@lambda) >= @breakthreshold;
+    // Remove the constraint if it exceeds the fracture threshold
+    if (@breakthreshold >= 0.0f && fabs(@lambda) >= @breakthreshold)
+    {
+        @broken.set(1);
+    }
     
     // Update the penalty parameter and clamp to material stiffness if we are within the force bounds (Eq. 16)
     if (lambda > @fmin && lambda < @fmax)

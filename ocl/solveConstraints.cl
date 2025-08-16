@@ -545,19 +545,19 @@ static inline void accumulateMaterialForceAndHessian_NeoHookean(
     // Reordered to match Vellum (originally p1 - p0, p2 - p0, p3 - p0)
     // The deformation direction depends on which point we are, but the forces stay the same
     fpreal m1, m2, m3;
-    if (idx == pt0)
+    if (pt0 == idx)
     {
         m1 = Dminv[0][0];
         m2 = Dminv[0][1];
         m3 = Dminv[0][2];
     }
-    else if (idx == pt1)
+    else if (pt1 == idx)
     {
         m1 = Dminv[1][0];
         m2 = Dminv[1][1];
         m3 = Dminv[1][2];
     } 
-    else if (idx == pt2)
+    else if (pt2 == idx)
     {
         m1 = Dminv[2][0];
         m2 = Dminv[2][1];
@@ -702,20 +702,13 @@ static inline void accumulateBoundaryForceAndHessian(
 // It ensures stuff runs properly regardless how the workgroups are split
 // Check the "Use Single Workgroup" setting in the Options tab to see what it does
 kernel void solveConstraints(
-#ifdef SINGLE_WORKGROUP
-#ifdef SINGLE_WORKGROUP_SPANS
-    int startcolor,
-#endif
-    int ncolors,
-    global const int *color_offsets,
-    global const int *color_lengths,
-#else
     int color_offset,
     int color_length,
-#endif
     const fpreal timeinc,
     int _bound_P_length,
     global fpreal * restrict _bound_P,
+    int _bound_coloredidx_length,
+    global int * restrict _bound_coloredidx,
     int _bound_inertia_length,
     global fpreal * restrict _bound_inertia,
     int _bound_mass_length,
@@ -795,39 +788,17 @@ kernel void solveConstraints(
 {
     // Like Vellum, everything here is based on timeinc
     if (timeinc == 0.0f) return;
-#ifdef SINGLE_WORKGROUP
-#define SKIPWORKITEM continue
-#ifdef SINGLE_WORKGROUP_SPANS
-   for (int i = startcolor; i < startcolor + ncolors; ++i)
-   {
-#else
-   for (int i = 0; i < ncolors; ++i)
-   {
-#endif
-        int color_length = color_lengths[i];
-        int color_offset = color_offsets[i];
-        if (i > 0) barrier(CLK_GLOBAL_MEM_FENCE);
-#ifdef SINGLE_WORKGROUP_ALWAYS
-    color_offset -= get_global_size(0);
-    color_length += get_global_size(0);
-    while (1)
-    {
-        color_offset += get_global_size(0);
-        color_length -= get_global_size(0);
-        if (color_length <= 0) break;
-#endif
-#else
-#define SKIPWORKITEM return
-    {
-#endif
+    
     int idx = get_global_id(0);
-    if (idx >= color_length) SKIPWORKITEM;
+    if (idx >= color_length) return;
     idx += color_offset;
     
     const fpreal mass = _bound_mass[idx];
     const int stopped = _bound_stopped[idx];
-    if (mass <= 0.0f || stopped) SKIPWORKITEM; // Skip pinned points
+    if (mass <= 0.0f || stopped) return; // Skip pinned points
     
+    // @coloredidx maps from Geometry to ConstraintGeometry pointprims
+    int coloredidx = _bound_coloredidx[idx];
     fpreal3 P = vload3(idx, _bound_P);
     const fpreal3 pprevious = vload3(idx, _bound_pprevious);
     const fpreal3 inertia = vload3(idx, _bound_inertia);
@@ -855,10 +826,10 @@ kernel void solveConstraints(
     
     // Accumulate energy for each constraint connected to the current point
     // This should really be run in parallel (thread level) to match the paper
-    const int num_constraints = entriesAt(_bound_pointprims, idx);
+    const int num_constraints = entriesAt(_bound_pointprims, coloredidx);
     for (int constraint_id = 0; constraint_id < num_constraints; ++constraint_id)
     {
-        const int prim_id = compAt(_bound_pointprims, idx, constraint_id);
+        const int prim_id = compAt(_bound_pointprims, coloredidx, constraint_id);
         const int constraint_type = _bound_type[prim_id];
         
         switch (constraint_type)
@@ -944,10 +915,4 @@ kernel void solveConstraints(
 
     vstore3(P_before_solve, idx, _bound_plastiter);
 #endif
-#ifdef SINGLE_WORKGROUP
-#ifdef SINGLE_WORKGROUP_ALWAYS
-    }
-#endif
-#endif
-    }
 }
