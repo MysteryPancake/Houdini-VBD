@@ -36,6 +36,8 @@ Thanks to Anka He Chen and Chris Giles for making these open source with permiss
   - [x] [Spring constraints](https://github.com/savant117/avbd-demo2d/blob/main/source/spring.cpp)
   - [ ] [Joint constraints](https://github.com/savant117/avbd-demo2d/blob/main/source/joint.cpp)
   - [ ] [Motor constraints](https://github.com/savant117/avbd-demo2d/blob/main/source/motor.cpp)
+  - [ ] Update all existing constraints to AVBD
+  - [ ] Breaking constraints
   - [ ] Rigid body support
 - [ ] Steal from myself
   - [ ] SDF collisions
