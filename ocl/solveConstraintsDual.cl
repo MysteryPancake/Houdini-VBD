@@ -64,6 +64,9 @@ static inline fpreal computeConstraint_SpringAVBD(
     lambda = clamp(@penalty * C + lambda, @fmin, @fmax);
     @lambda.set(lambda);
     
+    // TODO: Remove the constraint if it exceeds the fracture threshold
+    // @group_broken = fabs(@lambda) >= @breakthreshold;
+    
     // Update the penalty parameter and clamp to material stiffness if we are within the force bounds (Eq. 16)
     if (lambda > @fmin && lambda < @fmax)
     {

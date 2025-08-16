@@ -8,11 +8,11 @@
 #bind point &?vlast fpreal3
 #bind point &inertia fpreal3
 #bind point mass fpreal val=1
-#bind point &?omega fpreal val=1
+#bind point stopped int val=0
 
 @KERNEL
 {
-    if (@mass <= 0) return; // Skip pinned points
+    if (@mass <= 0 || @stopped) return; // Skip pinned points
     
 #ifdef HAS_plast
     @plast.set(@pprevious);
@@ -25,7 +25,11 @@
 #endif
     @vprevious.set(@v);
     
+#if use_gravity
+    // Gravity gets added directly to the velocity
+    // This is the same as adding it to the inertia as @gravity * @TimeInc * @TimeInc
     @v.set(@v + @gravity * @TimeInc);
+#endif
 
 #if defined(HAS_plast) && defined(HAS_vlast)
     // Second order integration
@@ -37,9 +41,4 @@
 #endif
     
     @P.set(@inertia);
-
-#ifdef HAS_omega
-    // Used for accelerated convergence, tends to explode so it's disabled by default
-    @omega.set(1);
-#endif
 }

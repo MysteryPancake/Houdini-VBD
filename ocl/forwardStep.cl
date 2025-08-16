@@ -5,18 +5,23 @@
 #bind point &v fpreal3
 #bind point &inertia fpreal3
 #bind point &pprevious fpreal3
-#bind point &?omega fpreal val=1
 #bind point vprevious fpreal3
 #bind point mass fpreal val=1
+#bind point stopped int val=0
 
 @KERNEL
 {
-    if (@mass <= 0) return; // Skip pinned points
+    if (@mass <= 0 || @stopped) return; // Skip pinned points
     
     @pprevious.set(@P);
     
-    // First order integration, same as Vellum
+#if use_gravity
+    // Gravity gets added directly to the velocity
+    // This is the same as adding it to the inertia as @gravity * @TimeInc * @TimeInc
     @v.set(@v + @gravity * @TimeInc);
+#endif
+
+    // First order integration, same as Vellum
     const fpreal3 inertia = @P + @v * @TimeInc;
     @inertia.set(inertia);
     
@@ -41,10 +46,5 @@
         const fpreal accelWeight = clamp(dot(accel, gravDir) / gravNorm, 0.0f, 1.0f);
         @P.set(@P + @vprevious * @TimeInc + @gravity * accelWeight * @TimeInc * @TimeInc);
     }
-#endif
-
-#ifdef HAS_omega
-    // Used for accelerated convergence, tends to explode so it's disabled by default
-    @omega.set(1);
 #endif
 }

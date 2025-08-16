@@ -3,10 +3,11 @@
 #bind point P fpreal3
 #bind point pprevious fpreal3
 #bind point mass fpreal val=1
+#bind point stopped int val=0
 
 @KERNEL
 {
-    if (@mass <= 0) return; // Skip pinned points
+    if (@mass <= 0 || @stopped) return; // Skip pinned points
     
     // Vellum sets @vprevious at the start of each substep, but VBD sets it here
     // This is not a typo, it's used for an acceleration estimate during adaptive warmstarting

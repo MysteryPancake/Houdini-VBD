@@ -214,7 +214,7 @@ static inline void accumulateMaterialForceAndHessian_SpringAVBD(
     const fpreal3 p0 = vload3(pt0, _bound_P);
     const fpreal3 p1 = vload3(pt1, _bound_P);
     
-    const fpreal rest = _bound_restlength[prim_id];
+    const fpreal restlength = _bound_restlength[prim_id];
     const fpreal stiffness = _bound_stiffness[prim_id] * STIFFNESS_SCALE;
     const fpreal lambda = _bound_lambda[prim_id];
     const fpreal penalty = _bound_penalty[prim_id];
@@ -226,16 +226,19 @@ static inline void accumulateMaterialForceAndHessian_SpringAVBD(
     const fpreal3 d = p0 - p1;
     const fpreal dlen2 = dot(d, d);
     const fpreal dlen = sqrt(dlen2);
-    const fpreal C = dlen - rest;
+    const fpreal C = dlen - restlength;
     const fpreal3 n = d / dlen;
 
-    // AVBD uses both a jacobian (first derivative) and a hessian (second derivative)
-    // Below is inlined (I - outer(n, n) / dlen2) / dlen
+    // This hessian isn't rotated like in avbd-2d, because @orient isn't supported yet
+    // Not sure how much difference this makes to stability
+    // With rotation the hessian would be 4x4, god help me
     mat3 H = {
         ((fpreal3)(1.0f, 0.0f, 0.0f) - (n * n.x) / dlen2) / dlen,
         ((fpreal3)(0.0f, 1.0f, 0.0f) - (n * n.y) / dlen2) / dlen,
         ((fpreal3)(0.0f, 0.0f, 1.0f) - (n * n.z) / dlen2) / dlen
     };
+    // AVBD also uses a jacobian (1st derivative)
+    // VBD constraints should probably be updated to use a jacobian too
     const fpreal3 J = pt0 == idx ? n : -n;
 
     accumulateAVBD(force, hessian, H, J, C, stiffness, lambda, penalty, fmin, fmax);
@@ -262,13 +265,13 @@ static inline void accumulateMaterialForceAndHessian_MassSpring(
     const fpreal3 p0 = vload3(pt0, _bound_P);
     const fpreal3 p1 = vload3(pt1, _bound_P);
     
-    const fpreal rest = _bound_restlength[prim_id];
+    const fpreal restlength = _bound_restlength[prim_id];
     const fpreal stiffness = _bound_stiffness[prim_id] * STIFFNESS_SCALE;
 
     const fpreal3 d = p0 - p1;
     const fpreal dlen2 = dot(d, d);
     const fpreal dlen = sqrt(dlen2);
-    const fpreal l_ratio = rest / dlen;
+    const fpreal l_ratio = restlength / dlen;
     
     // Mass-spring hessian from TinyVBD
     const fpreal3 x_ident = (fpreal3)(1.0f, 0.0f, 0.0f);
@@ -286,7 +289,7 @@ static inline void accumulateMaterialForceAndHessian_MassSpring(
     mat3add(hessian, ms_hessian, hessian);
     
     // Mass-spring force gradient from TinyVBD
-    (*force) += (stiffness * (rest - dlen) / dlen) * d * (pt0 == idx ? 1 : -1);
+    (*force) += (stiffness * (restlength - dlen) / dlen) * d * (pt0 == idx ? 1 : -1);
 }
 
 // For neo-hookean constraints, turn the 9x9 deformation gradient into a 3x3 hessian
@@ -717,6 +720,8 @@ kernel void solveConstraints(
     global fpreal * restrict _bound_inertia,
     int _bound_mass_length,
     global fpreal * restrict _bound_mass,
+    int _bound_stopped_length,
+    global int * restrict _bound_stopped,
     int _bound_pointprims_length,
     global int * restrict _bound_pointprims_index,
     global int * restrict _bound_pointprims,
@@ -820,7 +825,8 @@ kernel void solveConstraints(
     idx += color_offset;
     
     const fpreal mass = _bound_mass[idx];
-    if (mass <= 0.0f) SKIPWORKITEM; // Skip pinned points
+    const int stopped = _bound_stopped[idx];
+    if (mass <= 0.0f || stopped) SKIPWORKITEM; // Skip pinned points
     
     fpreal3 P = vload3(idx, _bound_P);
     const fpreal3 pprevious = vload3(idx, _bound_pprevious);
