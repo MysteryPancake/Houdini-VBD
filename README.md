@@ -7,11 +7,11 @@
 
 WIP of Vertex Block Descent (VBD) in Houdini. It runs natively without plugins, as god intended.
 
+It's a full rewrite in OpenCL based on [TinyVBD](https://github.com/AnkaChan/TinyVBD), [Gaia](https://github.com/AnkaChan/Gaia), [NVIDIA Warp](https://github.com/NVIDIA/warp/blob/main/warp/sim/integrator_vbd.py), [AVBD](https://github.com/savant117/avbd-demo2d) and some ideas from the papers.
+
 Now supports the main additions from Augmented Vertex Block Descent (AVBD) too! Note this currently only affects AVBD constraints.
 
-There's an OpenCL version for performance, and an old VEX version to show how it works. Both are included in the HIP files.
-
-I ported everything from [TinyVBD](https://github.com/AnkaChan/TinyVBD), some bits from [AVBD](https://github.com/savant117/avbd-demo2d), [Gaia](https://github.com/AnkaChan/Gaia) and some ideas from the papers.
+As well as the OpenCL version, there's an old VEX version to show how it works. Both are included in the HIP files.
 
 Thanks to Anka He Chen and Chris Giles for making these open source with permissive licenses!
 
@@ -146,7 +146,7 @@ VBD also has accelerated convergence method meant to improve convergence for sti
 
 It's named "Improve Convergence" in the Advanced tab and disabled by default, as it tends to explode with high values.
 
-AVBD adds hard constraints which should resolve much faster, but I haven't implemented this yet.
+AVBD also adds dual solving meant to improve stiffness. This is available for AVBD Spring constraints currently, but it has mixed results.
 
 ## Why do collisions not work sometimes?
 
@@ -156,7 +156,7 @@ In practice this means other forces can overpower collisions. For example, stiff
 
 This can be fixed by increasing the stiffness of the ground, or reducing the stiffness of everything else.
 
-AVBD adds hard constraints which should prevent this from happening, but I haven't implemented this yet.
+AVBD adds hard constraints which should prevent this from happening, but I haven't implemented this for collisions yet.
 
 ## Why does it explode randomly?
 
