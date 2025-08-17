@@ -7,7 +7,7 @@
 
 WIP of Vertex Block Descent (VBD) in Houdini. It runs natively without plugins, as god intended.
 
-Now supporting the main contributions from Augmented Vertex Block Descent (AVBD) too!
+Now supports the main additions from Augmented Vertex Block Descent (AVBD) too! Note this currently only affects AVBD constraints.
 
 There's an OpenCL version for performance, and an old VEX version to show how it works. Both are included in the HIP files.
 
