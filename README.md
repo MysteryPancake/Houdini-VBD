@@ -5,7 +5,9 @@
 <img src="./images/avbd_dual.webp" width="45%"></img>
 <img src="./images/breaking.webp" width="45%"></img>
 
-WIP of Augmented Vertex Block Descent (AVBD) in Houdini. It runs natively without plugins, as god intended.
+WIP of Vertex Block Descent (VBD) in Houdini. It runs natively without plugins, as god intended.
+
+Now supporting the main contributions from Augmented Vertex Block Descent (AVBD) too!
 
 There's an OpenCL version for performance, and an old VEX version to show how it works. Both are included in the HIP files.
 
