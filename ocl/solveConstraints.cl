@@ -21,12 +21,12 @@ typedef fpreal fpreal9[9];
 typedef fpreal9 mat9[9];
 
 // Prefixed in case these get added to matrix.h later
-static inline fpreal3 _mat32vecmul(const mat32 a, const fpreal2 b)
+static fpreal3 _mat32vecmul(const mat32 a, const fpreal2 b)
 {
     return (fpreal3)(dot(a[0], b), dot(a[1], b), dot(a[2], b));
 }
 
-static inline fpreal2 _mat32Tvecmul(const mat32 a, const fpreal3 b)
+static fpreal2 _mat32Tvecmul(const mat32 a, const fpreal3 b)
 {
     return (fpreal2)(
         dot((fpreal3)(a[0][0], a[1][0], a[2][0]), b),
@@ -34,7 +34,7 @@ static inline fpreal2 _mat32Tvecmul(const mat32 a, const fpreal3 b)
     );
 }
 
-static inline void _mat3adddiag(mat3 mout, const mat3 m, const fpreal x)
+static void _mat3adddiag(mat3 mout, const mat3 m, const fpreal x)
 {
     mout[0][0] = m[0][0] + x;
     mout[1][1] = m[1][1] + x;
@@ -43,7 +43,7 @@ static inline void _mat3adddiag(mat3 mout, const mat3 m, const fpreal x)
 
 // Helps compute tangents for friction based on the surface normal
 // From https://graphics.pixar.com/library/OrthonormalB/paper.pdf
-static inline void buildOrthonormalBasis(const fpreal3 n, mat32 out)
+static void buildOrthonormalBasis(const fpreal3 n, mat32 out)
 {
     const fpreal sign = copysign(1.0f, n.z);
     const fpreal a = -1.0f / (sign + n.z);
@@ -58,7 +58,7 @@ static inline void buildOrthonormalBasis(const fpreal3 n, mat32 out)
 
 // force * invert(hessian) using LDLT decomposition
 // From https://github.com/savant117/avbd-demo2d/blob/main/source/maths.h#L323
-static inline fpreal3 solveLDLT(
+static fpreal3 solveLDLT(
     const fpreal3 force,
     const mat3 hessian)
 {
@@ -91,7 +91,7 @@ static inline fpreal3 solveLDLT(
 
 // out = force * invert(hessian) with a check similar to fabs(det3(hessian)) < epsilon
 // From https://github.com/AnkaChan/CuMatrix/blob/main/CuMatrix/MatrixOps/CuMatrix.h#L235
-static inline int solveDirect(
+static int solveDirect(
     const fpreal3 force,
     const mat3 hessian,
     fpreal3 *out,
@@ -114,7 +114,7 @@ static inline int solveDirect(
 
 // Used for accelerated convergence, tends to explode. Probably will remove later
 // From https://github.com/AnkaChan/TinyVBD/blob/main/main.cpp#L193
-static inline fpreal getAcceleratorOmega(
+static fpreal getAcceleratorOmega(
     const int order,
     const fpreal pho,
     const fpreal prev_omega)
@@ -132,7 +132,7 @@ static inline fpreal getAcceleratorOmega(
 
 // Influence from inertia and mass. Sadly this also includes gravity, so damping also affects gravity
 // From https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_BaseMaterial.h#L359
-static inline void accumulateInertiaForceAndHessian(
+static void accumulateInertiaForceAndHessian(
     fpreal3 *force,
     mat3 hessian,
     const fpreal mass,
@@ -147,7 +147,7 @@ static inline void accumulateInertiaForceAndHessian(
 
 // SPD diagonal approximation of the hessian from AVBD
 // This greatly improves stability for stiff constraints, but causes issues with neo-hookean
-static inline void spdApproximation(mat3 h)
+static void spdApproximation(mat3 h)
 {
     // Column norm in the diagonal
     h[0][0] = length((fpreal3)(h[0][0], h[1][0], h[2][0]));
@@ -159,7 +159,7 @@ static inline void spdApproximation(mat3 h)
 }
 
 // From https://github.com/savant117/avbd-demo2d/blob/main/source/solver.cpp#L205
-static inline void dualUpdateAVBD(
+static void dualUpdateAVBD(
     global fpreal *_bound_lambda,
     global fpreal *_bound_penalty,
     global int *_bound_broken,
@@ -204,7 +204,7 @@ static inline void dualUpdateAVBD(
 }
 
 // From https://github.com/savant117/avbd-demo2d/blob/main/source/solver.cpp#L179
-static inline void accumulateAVBD_Spring(
+static void accumulateAVBD_Spring(
     fpreal3 *force,
     mat3 hessian,
     const fpreal3 J, // Jacobian (1st derivative)
@@ -237,7 +237,7 @@ static inline void accumulateAVBD_Spring(
 
 // Energy for spring constraints from AVBD
 // Should really be merged with the VBD mass-spring constraints
-static inline void accumulateMaterialForceAndHessian_SpringAVBD(
+static void accumulateMaterialForceAndHessian_SpringAVBD(
     fpreal3 *force,
     mat3 hessian,
     const int idx,
@@ -298,7 +298,7 @@ static inline void accumulateMaterialForceAndHessian_SpringAVBD(
 
 // From https://github.com/savant117/avbd-demo2d/blob/main/source/solver.cpp#L179
 // Simplified for joints, which have an empty hessian
-static inline void accumulateAVBD_Joint(
+static void accumulateAVBD_Joint(
     fpreal3 *force,
     mat3 hessian,
     const mat3 J, // Jacobian (1st derivative)
@@ -328,7 +328,7 @@ static inline void accumulateAVBD_Joint(
 }
 
 // Energy for joint constraints from AVBD
-static inline void accumulateMaterialForceAndHessian_JointAVBD(
+static void accumulateMaterialForceAndHessian_JointAVBD(
     fpreal3 *force,
     mat3 hessian,
     const int idx,
@@ -393,7 +393,7 @@ static inline void accumulateMaterialForceAndHessian_JointAVBD(
 
 // Energy for mass-spring constraints, based on their restlength like XPBD
 // From https://github.com/AnkaChan/TinyVBD/blob/main/main.cpp#L381
-static inline void accumulateMaterialForceAndHessian_MassSpring(
+static void accumulateMaterialForceAndHessian_MassSpring(
     fpreal3 *force,
     mat3 hessian,
     const int idx,
@@ -451,7 +451,7 @@ static inline void accumulateMaterialForceAndHessian_MassSpring(
 
 // For neo-hookean constraints, turn the 9x9 deformation gradient into a 3x3 hessian
 // From https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_NeoHookean.cpp#L126
-static inline void assembleForceAndHessian_NeoHookean(
+static void assembleForceAndHessian_NeoHookean(
     const fpreal9 dE_dF,
     const mat9 d2E_dF,
     const fpreal m1,
@@ -491,7 +491,7 @@ static inline void assembleForceAndHessian_NeoHookean(
 
 // Energy for neo-hookean constraints, based on each tet's volume deformation
 // From https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_NeoHookean.cpp#L379
-static inline void accumulateMaterialForceAndHessian_NeoHookean(
+static void accumulateMaterialForceAndHessian_NeoHookean(
     fpreal3 *force,
     mat3 hessian,
     const int idx,
@@ -758,7 +758,7 @@ static inline void accumulateMaterialForceAndHessian_NeoHookean(
 
 // From https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBDPhysics.cpp#L2786
 // Doesn't work well and tends to dampen gravity, but makes cool patterns in Vellum 2nd order mode
-static inline void accumulateDampingForceAndHessian(
+static void accumulateDampingForceAndHessian(
     fpreal3 *force,
     mat3 hessian,
     const fpreal3 velocity,
@@ -777,7 +777,7 @@ static inline void accumulateDampingForceAndHessian(
 // Energy from friction, used for all types of collisions in GAIA
 // From https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_GeneralCompute.h#L10
 // Based on https://github.com/ipc-sim/ipc-toolkit/blob/main/src/ipc/friction/smooth_friction_mollifier.cpp
-static inline void accumulateVertexFriction(
+static void accumulateVertexFriction(
     const fpreal mu,
     const fpreal lambda,
     const mat32 T,
@@ -811,7 +811,7 @@ static inline void accumulateVertexFriction(
 // Planar collisions with friction
 // From https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_GeneralCompute.h#L87
 // Improved by https://github.com/NVIDIA/warp/blob/main/warp/sim/integrator_vbd.py#L513
-static inline void accumulateBoundaryForceAndHessian(
+static void accumulateBoundaryForceAndHessian(
     fpreal3 *force,
     mat3 hessian,
     const fpreal3 P,

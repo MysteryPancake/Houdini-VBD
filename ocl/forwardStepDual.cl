@@ -22,7 +22,7 @@ const fpreal STIFFNESS_SCALE = 10.0f;
 
 // From https://github.com/savant117/avbd-demo2d/blob/main/source/joint.cpp#L27
 // Abusing #define variable naming to use @ bindings here
-static inline void initialize_JointAVBD(
+static void initialize_JointAVBD(
     const int _bound_idx,
     global int *_bound_primpoints,
     global int *_bound_primpoints_index,
