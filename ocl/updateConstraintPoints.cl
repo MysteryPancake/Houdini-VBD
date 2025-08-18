@@ -4,5 +4,8 @@
 
 @KERNEL
 {
+    // Skip non-matching points
+    if (@coloredidx < 0) return;
+
     @Pcon.set(@P.getAt(@coloredidx));
 }

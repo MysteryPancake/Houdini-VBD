@@ -855,6 +855,8 @@ kernel void solveConstraints(
     
     // @coloredidx maps from Geometry to ConstraintGeometry pointprims
     int coloredidx = _bound_coloredidx[idx];
+    if (coloredidx < 0) return;
+    
     fpreal3 P = vload3(idx, _bound_P);
     const fpreal3 pprevious = vload3(idx, _bound_pprevious);
     const fpreal3 inertia = vload3(idx, _bound_inertia);
