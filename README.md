@@ -7,9 +7,9 @@
 
 WIP of Vertex Block Descent (VBD) in Houdini. It runs natively without plugins, as god intended.
 
-It's a full rewrite in OpenCL based on [TinyVBD](https://github.com/AnkaChan/TinyVBD), [Gaia](https://github.com/AnkaChan/Gaia), [NVIDIA Warp](https://github.com/NVIDIA/warp/blob/main/warp/sim/integrator_vbd.py), [AVBD](https://github.com/savant117/avbd-demo2d) and some ideas from the papers.
+It's a complete rewrite in OpenCL based on all official references ([TinyVBD](https://github.com/AnkaChan/TinyVBD), [Gaia](https://github.com/AnkaChan/Gaia), [NVIDIA Warp](https://github.com/NVIDIA/warp/blob/main/warp/sim/integrator_vbd.py), [AVBD-2D](https://github.com/savant117/avbd-demo2d)).
 
-Now supports the main additions from Augmented Vertex Block Descent (AVBD) too! Note this currently only affects AVBD constraints.
+Now supporting key additions from Augmented Vertex Block Descent (AVBD)! Note this currently only affects AVBD constraints.
 
 As well as the OpenCL version, there's an old VEX version to show how it works. Both are included in the HIP files.
 
@@ -18,27 +18,35 @@ Thanks to Anka He Chen and Chris Giles for making these open source with permiss
 | [Download the HIP file!](../../releases/latest) |
 | --- |
 
-## Todo
-- [x] Steal from [TinyVBD](https://github.com/AnkaChan/TinyVBD)
-  - [x] [Mass-spring energy definition](https://github.com/AnkaChan/TinyVBD/blob/main/main.cpp#L381) (for strings)
+## Features
+
+### From [TinyVBD](https://github.com/AnkaChan/TinyVBD)
+  - [x] [Mass-Spring constraints](https://github.com/AnkaChan/TinyVBD/blob/main/main.cpp#L381) (for strings)
   - [x] [Accelerated convergence method (section 3.8)](https://graphics.cs.utah.edu/research/projects/vbd/vbd-siggraph2024.pdf)
+  - [x] Hessian direct inverse
+
+### From [Gaia](https://github.com/AnkaChan/Gaia)
+  - [x] [Neo-Hookean constraints](https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_NeoHookean.cpp) (for tetrahedrons)
+  - [x] Damping
+  - [x] Floor collisions
+  - [x] Friction
+
+### From [AVBD-2D](https://github.com/savant117/avbd-demo2d)
+  - [x] [Spring constraints](https://github.com/savant117/avbd-demo2d/blob/main/source/spring.cpp) (currently not including rigid rotation)
+  - [x] [Joint constraints](https://github.com/savant117/avbd-demo2d/blob/main/source/joint.cpp) (currently not including rigid rotation)
+  - [x] Dual constraint updates
+  - [x] Breaking constraints
+  - [x] [Hessian LDLT decomposition](https://graphics.cs.utah.edu/research/projects/avbd/Augmented_VBD-SIGGRAPH25.pdf)
+  - [x] [SPD hessian approximation (section 3.5)](https://graphics.cs.utah.edu/research/projects/avbd/Augmented_VBD-SIGGRAPH25.pdf)
+
+## Todo
 - [ ] Steal from [NVIDIA Warp](https://github.com/NVIDIA/warp)
   - [ ] [StVK energy definition](https://github.com/NVIDIA/warp/blob/main/warp/sim/integrator_vbd.py) (for cloth)
 - [ ] Steal from [Gaia](https://github.com/AnkaChan/Gaia)
-  - [x] [Neo-hookean energy definition](https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_NeoHookean.cpp) (for tetrahedrons)
-  - [x] Damping
-  - [x] Floor collisions
   - [ ] Self collisions
   - [ ] External collisions
-  - [x] Friction
 - [ ] Steal from [AVBD](https://graphics.cs.utah.edu/research/projects/avbd/)
-  - [x] [LDLT decomposition](https://graphics.cs.utah.edu/research/projects/avbd/Augmented_VBD-SIGGRAPH25.pdf) to improve speed
-  - [x] [SPD hessian approximation (section 3.5)](https://graphics.cs.utah.edu/research/projects/avbd/Augmented_VBD-SIGGRAPH25.pdf) to improve stability
-  - [x] Dual constraint updating
-  - [x] [Spring constraints](https://github.com/savant117/avbd-demo2d/blob/main/source/spring.cpp) (currently not including rigid rotation)
-  - [x] [Joint constraints](https://github.com/savant117/avbd-demo2d/blob/main/source/joint.cpp) (currently not including rigid rotation)
   - [ ] [Motor constraints](https://github.com/savant117/avbd-demo2d/blob/main/source/motor.cpp)
-  - [x] Breaking constraints
   - [ ] Rigid body support
   - [ ] Hard constraints for collisions
   - [ ] Update all existing constraints to AVBD
@@ -139,31 +147,23 @@ v@v = (v@P - v@pprevious) / f@TimeInc;
 
 ## Why does stiffness have a limit?
 
-Like with Vellum (XPBD), stiff objects are limited by the number of constraint iterations and substeps.
+Like with Vellum (XPBD), stiff objects are limited by the number of constraint iterations and substeps. The more constraint iterations and substeps, the more accurately stiff objects are resolved.
 
-The more constraint iterations and substeps, the more accurately stiff objects are resolved.
+VBD also has accelerated convergence method meant to improve convergence for stiff constraints. It's named "Improve Convergence" in the Advanced tab and disabled by default, as it tends to explode with high values.
 
-VBD also has accelerated convergence method meant to improve convergence for stiff constraints.
-
-It's named "Improve Convergence" in the Advanced tab and disabled by default, as it tends to explode with high values.
-
-AVBD also adds dual solving meant to improve stiffness. This is available for AVBD Spring constraints currently, but it has mixed results.
+AVBD also adds dual solving meant to improve stiffness. This is used for all AVBD constraint types.
 
 ## Why do collisions not work sometimes?
 
 VBD solves collisions as soft constraints, meaning collisions get added onto the force and hessian like everything else.
 
-In practice this means other forces can overpower collisions. For example, stiffer materials than the ground can penetrate it.
-
-This can be fixed by increasing the stiffness of the ground, or reducing the stiffness of everything else.
+In practice this means other forces can overpower collisions. For example, stiffer materials than the ground can penetrate it. This can be fixed by increasing the stiffness of the ground, or reducing the stiffness of everything else.
 
 AVBD adds hard constraints which should prevent this from happening, but I haven't implemented this for collisions yet.
 
 ## Why does it explode randomly?
 
-This solver used to explode every 5 seconds, but now it's much better. Explosions are a common issue with VBD.
-
-As mentioned, VBD involves updating the position based on force elements and a hessian matrix:
+VBD involves updating the position based on force elements and a hessian matrix:
 
 ```c
 v@P += force * invert(hessian); // force and hessian depend on the energy definition, eg mass-spring or neo-hookean
@@ -183,7 +183,7 @@ The new [AVBD paper](https://graphics.cs.utah.edu/research/projects/avbd/Augment
 
 ## AVBD Q&A
 
-There's a new paper called [Augmented Vertex Block Descent (AVBD)](https://graphics.cs.utah.edu/research/projects/avbd/Augmented_VBD-SIGGRAPH25.pdf). It adds many improvements to VBD.
+The recent [Augmented Vertex Block Descent (AVBD) paper](https://graphics.cs.utah.edu/research/projects/avbd/) adds many improvements to VBD.
 
 I asked the authors about some differences I noticed. They responded with lots of useful information. Thanks guys!
 
