@@ -756,9 +756,12 @@ static inline void accumulateBoundaryForceAndHessian(
     accumulateVertexFriction(friction, ground_force_norm, T, u, epsU * timeinc, force, hessian);
 }
 
-// I stole the workgroup span code from Vellum (pbd_constraints.cl)
-// It ensures stuff runs properly regardless how the workgroups are split
-// Check the "Use Single Workgroup" setting in the Options tab to see what it does
+// Workgroups are computed for points in graph_color, since we're using Vertex Block Descent
+// See pbd_constraints.cl for another example of this, note it runs on prims instead
+// For Vellum compatibility, you need separate workgroups for points (VBD) and prims (XPBD)
+
+// Coloring is based on ConstraintGeometry, because ConstraintGeometry can have many more connections than Geometry
+// This ensures the coloring respects all connections properly, for the best possible stability
 kernel void solveConstraints(
     int color_offset,
     int color_length,
