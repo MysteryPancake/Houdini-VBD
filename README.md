@@ -35,7 +35,7 @@ Thanks to Anka He Chen and Chris Giles for making these open source with permiss
   - [x] [LDLT decomposition](https://graphics.cs.utah.edu/research/projects/avbd/Augmented_VBD-SIGGRAPH25.pdf) to improve speed
   - [x] [SPD hessian approximation (section 3.5)](https://graphics.cs.utah.edu/research/projects/avbd/Augmented_VBD-SIGGRAPH25.pdf) to improve stability
   - [x] Dual constraint updating
-  - [x] [Spring constraints](https://github.com/savant117/avbd-demo2d/blob/main/source/spring.cpp)
+  - [x] [Spring constraints](https://github.com/savant117/avbd-demo2d/blob/main/source/spring.cpp) (WIP, not including rigid rotation)
   - [ ] [Joint constraints](https://github.com/savant117/avbd-demo2d/blob/main/source/joint.cpp)
   - [ ] [Motor constraints](https://github.com/savant117/avbd-demo2d/blob/main/source/motor.cpp)
   - [x] Breaking constraints
