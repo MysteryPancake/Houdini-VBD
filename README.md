@@ -9,7 +9,7 @@ WIP of Vertex Block Descent (VBD) in Houdini. It runs natively without plugins, 
 
 It's a complete rewrite in OpenCL based on all official references ([TinyVBD](https://github.com/AnkaChan/TinyVBD), [Gaia](https://github.com/AnkaChan/Gaia), [NVIDIA Warp](https://github.com/NVIDIA/warp/blob/main/warp/sim/integrator_vbd.py), [AVBD-2D](https://github.com/savant117/avbd-demo2d)).
 
-Now it supports the key additions from Augmented Vertex Block Descent (AVBD) too! Note this currently only affects AVBD constraint types.
+Now supporting key additions from Augmented Vertex Block Descent (AVBD)! Note this currently only affects AVBD constraints.
 
 As well as the OpenCL version, there's an old VEX version to show how it works. Both are included in the HIP files.
 
