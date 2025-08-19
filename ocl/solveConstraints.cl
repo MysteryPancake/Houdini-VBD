@@ -182,8 +182,7 @@ static void dualUpdateAVBD(
         fpreal tmp_lambda = isinf(stiffness) ? lambda[i] : 0.0f;
         
         // Update lambda (Eq 11)
-        tmp_lambda = clamp(penalty[i] * C[i] + tmp_lambda, fmin[i], fmax[i]);
-        out_lambda[i] = tmp_lambda;
+        tmp_lambda = out_lambda[i] = clamp(penalty[i] * C[i] + tmp_lambda, fmin[i], fmax[i]);
         
         // Remove the constraint if it exceeds the fracture threshold
         const fpreal breakthreshold = _bound_breakthreshold[prim_id];

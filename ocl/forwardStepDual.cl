@@ -69,10 +69,11 @@ static void initialize_JointAVBD(
     }
     
     // Warmstart the dual variables and penalty parameters (Eq. 19)
-    // Penalty is safely clamped to a minimum and maximum value
     @lambda.set(@lambda * @alpha * @gamma);
     
-    // If it's not a hard constraint, we don't let the penalty exceed the material stiffness
+    // Penalty is safely clamped to a minimum and maximum value
     const fpreal3 penalty = clamp(@penalty * @gamma, @PENALTY_MIN, @PENALTY_MAX);
+    
+    // If it's not a hard constraint, we don't let the penalty exceed the material stiffness
     @penalty.set(min(penalty, @stiffness * STIFFNESS_SCALE));
 }
