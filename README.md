@@ -117,7 +117,7 @@ v@P += v@v * f@TimeInc * v@gravity * f@TimeInc * f@TimeInc;
 
 ### 2. Update the dual variables (AVBD)
 
-AVBD sets the stiffness of each prim based on `lambda` and `penalty`. They get dampened by `alpha` and `gamma` before constraint solving to prevent explosions.
+AVBD adjusts the stiffness based on `lambda` and `penalty`. They get dampened by `alpha` and `gamma` before constraint solving to prevent explosions.
 
 ```js
 // Warmstart the dual variables and penalty parameters (Eq. 19)
