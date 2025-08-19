@@ -64,7 +64,7 @@ Cloth is a good example of a soft body. It's easy to bend but hard to stretch. I
 
 <img src="./images/edging.png" width="700">
 
-VBD constraints are similar, but they're defined in terms of energy instead. The goal is reducing overall variational energy by reducing local energy per point. VBD constraints run over each point rather than each primitive, meaning less workgroups (colors) overall. However, each point typically has to loop over its neighbours to compute the energy, so the performance isn't necessarily better. The Graph Color node allows workgroups for points as well as prims, so it works both for VBD and XPBD.
+VBD constraints are similar, but they're defined in terms of energy instead. The goal is reducing overall variational energy by reducing local energy per point. VBD constraints run over each point rather than each prim, meaning less workgroups (colors) overall. However, each point typically has to loop over its neighbours to compute the energy, so the performance isn't necessarily better. The Graph Color node allows workgroups for points as well as prims, so it works both for VBD and XPBD.
 
 <img src="./images/energyreduction.png" width="700">
 
@@ -84,15 +84,29 @@ I've seen many different energy definitions, including mass-spring (used by [Tin
 
 Currently mass-spring and neo-hookean are supported, StVK is coming soon.
 
+## What's Augmented Vertex Block Descent?
+
+AVBD is an extension to VBD mainly to improve stiffness. It changes stiffness adaptively to prevent stuff getting too loose. Stiffness is stored on the prims, so both the points (primal elements) and prims (dual elements) must be updated.
+
+As you might expect, looping over both the points and the prims makes the solver 2x slower. Luckily I found it gives near identical results to move the dual solve logic into the point update, and 2x faster speed. It even works better since many points belong to each prim, so 10 connected points means 10x more updates to that prim.
+
+Adaptive stiffness currently only affects AVBD constraint types, such as AVBD Spring and AVBD Hinge. Eventually I'll rewrite the VBD constraints to use it too.
+
+AVBD also includes rigid bodies in a bizarre and unconventional way. Instead of solving each point of the rigid body, they represent the entire body as one point (like a packed prim). This means each point can have a rigid rotation, included in the hessian for better results.
+
+In my opinion this is cheating and goes against the design of VBD, but I'll eventually include packed prims and their rotations in the hessians. For now the AVBD constraints solve translation but not rigid rotation.
+
+AVBD also includes a SPD hessian approximation which greatly improves stability, so it's used on all constraints by default. However it causes instability for neo-hookean constraints, so it's optional for them.
+
 ## How does Vertex Block Descent run?
 
-Ignoring collisions, VBD is really just 3 steps. These steps are nearly identical to XPBD apart from the constraints.
+VBD is really just 3 steps. AVBD adds another 2 steps. The integration and velocity steps are nearly identical to XPBD.
 
 ### 1. Integrate the positions
 
 Add the velocity to the position (same as Vellum). VBD uses a warmstarting strategy to scale the gravity term below.
 
-```c
+```js
 // First-order integration
 v@pprevious = v@P;
 v@P += v@v * f@TimeInc * v@gravity * f@TimeInc * f@TimeInc;
@@ -101,11 +115,26 @@ v@P += v@v * f@TimeInc * v@gravity * f@TimeInc * f@TimeInc;
 | [OpenCL version](./ocl/forwardStep.cl) | [VEX version (outdated)](./vex/forwardStep.c) |
 | --- | --- |
 
-### 2. Apply the constraints
+### 2. Update the dual variables (AVBD)
 
-The core idea of VBD is updating the position based on force elements and a hessian matrix.
+AVBD sets the stiffness of each prim based on `@lambda` and `@penalty`. They get dampened by `alpha` and `gamma` before constraint solving to prevent explosions.
 
-If these are correct, moving the position should reduce the overall variational energy.
+```js
+// Warmstart the dual variables and penalty parameters (Eq. 19)
+@lambda *= alpha * gamma;
+
+// Penalty is safely clamped to a minimum and maximum value
+@penalty = min(clamp(@penalty * gamma, PENALTY_MIN, PENALTY_MAX), f@stiffness);
+```
+
+| [OpenCL version](./ocl/forwardStepDual.cl) | [Python version](https://github.com/savant117/avbd-demo2d/blob/main/source/solver.cpp#L105) |
+| --- | --- |
+
+### 3. Apply the constraints
+
+The core of VBD is moving the position based on a force gradient and a hessian matrix.
+
+If the hessian inverts without exploding, moving the position should reduce the overall variational energy.
 
 > [!CAUTION]
 > **This should be run in workgroups based on graph coloring!**
@@ -116,7 +145,7 @@ If these are correct, moving the position should reduce the overall variational 
 > 
 > This causes growing error each iteration, leading VBD to explode much more than usual.
 
-```c
+```js
 vector force = 0;
 matrix3 hessian = 0;
 
@@ -133,11 +162,31 @@ v@P += force * invert(hessian); // Reduce the variational energy of the system
 | [OpenCL version](./ocl/solveConstraints.cl) | [VEX version (outdated)](./vex/solveConstraints.c) |
 | --- | --- |
 
-### 3. Update the velocities
+### 4. Dual update (AVBD)
+
+Clamp `lambda` and `penalty` to prevent them exploding again. The `C` variable depends on the constraint type.
+
+```js
+// Use lambda as 0 if it's not a hard constraint
+float lambdaTmp = isinf(stiffness) ? lambda[i] : 0;
+
+// Update lambda (Eq 11)
+lambdaTmp = lambda[i] = clamp(penalty[i] * C[i] + lambdaTmp, fmin[i], fmax[i]);
+
+// Update the penalty parameter and clamp to material stiffness if we are within the force bounds (Eq. 16)
+if (lambdaTmp > fmin[i] && lambdaTmp < fmax[i]) {
+    penalty[i] = min(penalty[i] + beta * abs(C[i]), min(PENALTY_MAX, stiffness));
+}
+```
+
+| [OpenCL version](https://github.com/search?q=repo%3AMysteryPancake%2FHoudini-VBD%20dualUpdate&type=code) | [Python version](https://github.com/savant117/avbd-demo2d/blob/main/source/solver.cpp#L205) |
+| --- | --- |
+
+### 5. Update the velocities
 
 Update the velocities based on the change in position (same as Vellum).
 
-```c
+```js
 // First-order velocities
 v@v = (v@P - v@pprevious) / f@TimeInc;
 ```
@@ -165,13 +214,13 @@ AVBD adds hard constraints which should prevent this from happening, but I haven
 
 VBD involves updating the position based on force elements and a hessian matrix:
 
-```c
+```js
 v@P += force * invert(hessian); // force and hessian depend on the energy definition, eg mass-spring or neo-hookean
 ```
 
 `invert(hessian)` is very unstable, so everyone tries to bandaid it in various ways. The [VBD paper](https://graphics.cs.utah.edu/research/projects/vbd/vbd-siggraph2024.pdf) uses the determinant of the matrix:
 
-```c
+```js
 if (abs(determinant(hessian)) > 1e-7) { // if |det(H𝑖)| > 𝜖 for some small threshold 𝜖
   v@P += force * invert(hessian);
 }
@@ -226,7 +275,7 @@ Hi Chris, I was wondering what type energy you used for constraints? There were 
 
 Hi Chris, I was wondering if the order of these 2 lines is correct?
 
-```cpp
+```c
 body->prevVelocity = body->velocity; 
 if (body->mass > 0) 
    body->velocity = (body->position - body->initial) / dt;
