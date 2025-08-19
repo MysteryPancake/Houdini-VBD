@@ -124,7 +124,10 @@ AVBD adjusts the stiffness based on `lambda` and `penalty`. They get dampened by
 @lambda *= alpha * gamma;
 
 // Penalty is safely clamped to a minimum and maximum value
-@penalty = min(clamp(@penalty * gamma, PENALTY_MIN, PENALTY_MAX), f@stiffness);
+@penalty = clamp(@penalty * gamma, PENALTY_MIN, PENALTY_MAX);
+
+// If it's not a hard constraint, we don't let the penalty exceed the material stiffness
+@penalty = min(@penalty, f@stiffness);
 ```
 
 | [OpenCL version](./ocl/forwardStepDual.cl) | [Python version](https://github.com/savant117/avbd-demo2d/blob/main/source/solver.cpp#L105) |
