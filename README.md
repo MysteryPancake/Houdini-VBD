@@ -28,8 +28,11 @@ Thanks to Anka He Chen and Chris Giles for making these open source with permiss
 ### From [Gaia](https://github.com/AnkaChan/Gaia)
   - [x] [Neo-Hookean constraints](https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_NeoHookean.cpp) (for tetrahedrons)
   - [x] Damping
+
+### From [NVIDIA Warp](https://github.com/NVIDIA/warp/blob/main/warp/sim/integrator_vbd.py)
   - [x] Floor collisions
-  - [x] Friction
+  - [x] Floor friction
+  - [x] Floor damping
 
 ### From [AVBD-2D](https://github.com/savant117/avbd-demo2d)
   - [x] [Spring constraints](https://github.com/savant117/avbd-demo2d/blob/main/source/spring.cpp) (currently not including rigid rotation)
