@@ -117,7 +117,7 @@ v@P += v@v * f@TimeInc * v@gravity * f@TimeInc * f@TimeInc;
 
 ### 2. Update the dual variables (AVBD)
 
-AVBD sets the stiffness of each prim based on `@lambda` and `@penalty`. They get dampened by `alpha` and `gamma` before constraint solving to prevent explosions.
+AVBD sets the stiffness of each prim based on `lambda` and `penalty`. They get dampened by `alpha` and `gamma` before constraint solving to prevent explosions.
 
 ```js
 // Warmstart the dual variables and penalty parameters (Eq. 19)
@@ -135,6 +135,8 @@ AVBD sets the stiffness of each prim based on `@lambda` and `@penalty`. They get
 The core of VBD is moving the position based on a force gradient and a hessian matrix.
 
 If the hessian inverts without exploding, moving the position should reduce the overall variational energy.
+
+In AVBD, `lambda` and `penalty` change the results of `accumulateMaterialForceAndHessian()`.
 
 > [!CAUTION]
 > **This should be run in workgroups based on graph coloring!**
