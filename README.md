@@ -259,7 +259,7 @@ Hi Chris, I was wondering what type energy you used for constraints? There were 
 > No. The AVBD tests we have are for contacts and joints. VBD already covers soft bodies. AVBD makes no changes to that.
 > -Cem
 
-### [Previous velocity definition](https://github.com/savant117/avbd-demo2d/issues/4)
+### Previous velocity definition
 
 > [!NOTE]
 > I noticed this while looking into Vellum. Vellum uses 4 variables to track the previous 2 values of position and velocity:
@@ -273,7 +273,7 @@ Hi Chris, I was wondering what type energy you used for constraints? There were 
 >
 > However, TinyVBD and AVBD set `@vprevious` in a different place. I thought this was a typo, but turns out it's not.
 
-Hi Chris, I was wondering if the order of these 2 lines is correct?
+Hi Chris, I was wondering if the order of [these 2 lines](https://github.com/savant117/avbd-demo2d/issues/4) is correct?
 
 ```c
 body->prevVelocity = body->velocity; 
@@ -290,3 +290,13 @@ I saw the [same code in TinyVBD](https://github.com/AnkaChan/TinyVBD/blob/main/m
 > `float3 accel = (body->velocity - body->prevVelocity) / dt;`
 >
 > If we switched the order as suggested, then this acceleration would always be zero, and the adaptive warmstart would not help.
+
+### General design concerns
+
+Hi Chris, I've been looking through [the code for AVBD 2D](https://github.com/savant117/avbd-demo2d) and want to ask about the design. The way it's implemented seems strange, with many differences to the original paper. For example I was expecting cubes to be implemented as 4 points connected by hard constraints, but instead they're represented as a unique class of object (rigid).
+
+To me it reads more like a [rigid body solver](https://youtu.be/zpn49cadAnE?si=g4CsGfIuSV3zV6QU) with ideas from VBD on top. For example the loop of the solver goes over rigid bodies. This differs from the AVBD paper, which loops over each point. The code for springs also includes rotation, which is more a rigid body concept.
+
+I'm wondering how this applies to a cloth sim for example. Would you create a rigid body for each vertex of the cloth? In this case, what role does the rotation have?
+
+> No response yet :(
