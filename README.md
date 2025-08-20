@@ -83,11 +83,13 @@ The diagram above is for mass-spring energy, based on the rest length of each ed
 
 Here's a comparison between VBD and XPBD:
 
-|  | VBD | Vellum (XPBD) | Advantage | Disadvantage |
+|  | Vellum (XPBD) | VBD | Advantage | Disadvantage |
 | --- | --- | --- | --- | --- |
-| **Runs over** | <p align="center">Point colors<br><img src="./images/color_points.png" height="120"></p> | <p align="center">Prim colors<br><img src="./images/color_prims.png" height="120"></p> | Less colors/workgroups, faster for parallel processing | Takes longer to converge for stiff objects |
-| **Constraints** | Energy based (eg mass-spring energy or neo-hookean energy) | XPBD based (eg distance constraints) | Better for larger mass ratios | Randomly explodes due to hessian matrix inversion |
-| **Iterations** | Gauss-Seidel | Gauss-Seidel (for constraint iterations) and Jacobi (for smoothing iterations) | Reaches a global solution faster | Might be less stable |
+| **Runs over** | <p align="center">Prim colors<br><img src="./images/color_prims.png" height="120"></p> | <p align="center">Point colors<br><img src="./images/color_points.png" height="120"></p> | Less colors/workgroups, faster for parallel processing | Takes longer to converge for stiff constraints |
+| **Iterations** | Gauss-Seidel (for constraint iterations) and Jacobi (for smoothing iterations) | Gauss-Seidel | Reaches a global solution faster | May introduce jittering |
+| **Integration** | Inertia + acceleration | Inertia + acceleration or adaptive | Better energy preservation | Strange gravity reduction issues |
+| **Constraints** | XPBD based | Energy based | Better for larger mass ratios | Randomly explodes due to hessian matrix inversion |
+| **Collisions** | Detangle based | IPC based | Very accurate (not implemented yet though) | Slower to compute |
 
 The most important part of VBD is the energy definition, which depends on the constraint type. Here's a few:
 - Mass-spring (from [TinyVBD](https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_MassSpring.cpp) but [removed from Gaia](https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_MassSpring.cpp))
