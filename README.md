@@ -109,7 +109,7 @@ Adaptive stiffness currently only affects AVBD constraints. Eventually I'll rewr
 
 AVBD also includes rigid bodies in a bizarre and unconventional way. Instead of solving each point of the rigid body, they represent the entire body as one point (like a packed prim). This means each point can have a rigid rotation, included in the hessian for better results.
 
-In my opinion this is cheating and goes against the design of VBD, but I'll eventually include packed prims and their rotations in the hessians. For now AVBD constraints solve translation but not rigid rotation.
+I think this is cheating and goes against the design of VBD, but I'll eventually include packed prims and their rotations in the hessians. For now AVBD constraints solve translation but not rigid rotation.
 
 AVBD also includes a SPD hessian approximation which greatly improves stability, used on all constraints by default. However it causes instability for neo-hookean constraints, so it's optional for them.
 
