@@ -2,10 +2,10 @@
 
 #bind point &P fpreal3
 #bind point &v fpreal3
-#bind point &pprevious fpreal3
-#bind point &?plast fpreal3
-#bind point &vprevious fpreal3
-#bind point &?vlast fpreal3
+#bind point pprevious fpreal3
+#bind point ?plast fpreal3
+#bind point vprevious fpreal3
+#bind point ?vlast fpreal3
 #bind point &inertia fpreal3
 #bind point mass fpreal val=1
 #bind point stopped int val=0
@@ -13,17 +13,6 @@
 @KERNEL
 {
     if (@mass <= 0 || @stopped) return; // Skip pinned points
-    
-#ifdef HAS_plast
-    @plast.set(@pprevious);
-#endif
-    // Vellum sets @vprevious here rather than in updateVelocity()
-    @pprevious.set(@P);
-
-#ifdef HAS_vlast
-    @vlast.set(@vprevious);
-#endif
-    @vprevious.set(@v);
     
 #if use_gravity
     // Gravity gets added directly to the velocity

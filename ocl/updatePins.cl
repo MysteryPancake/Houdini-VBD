@@ -9,5 +9,6 @@
 
     // Graph Color sorts the points, so the order of the animated points mismatches
     // @id stores the index before sorting, use it to map back to the correct point
+    // This must be done after graph coloring since @id relies on it
     @P.set(@animP.getAt(@id));
 }
