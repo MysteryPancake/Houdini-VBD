@@ -119,9 +119,11 @@ Despite the hype, sadly not. In the best case it's the same speed as Vellum. It'
 
 On paper VBD is faster because it runs over points, which have less graph colors than prims. Graph colors control the number of workgroups, meaning how many points can be processed at the same time.
 
-<img src="./images/vellum_vs_vbd.png" width="600">
+<img src="./images/vellum_vs_vbd.png" height="500">
 
-While it's true points have less graph colors, for all constraint types in VBD, each point loops over its connections to compute their energy contributions. This adds tons of extra operations, often 2-4x more than Vellum.
+While it's true points have less graph colors, for all constraint types in VBD, each point loops over its connections to compute their energy contributions. This adds tons of extra operations, often 2-4x more than Vellum!
+
+<img src="./images/vellum_vs_vbd2.png" height="500">
 
 Even worse, these operations are expensive matrix calculations. The worst culprit is neo-hookean constraints. Tetrahedral meshes are densely connected, and each tet computes a 9x9 matrix!
 
