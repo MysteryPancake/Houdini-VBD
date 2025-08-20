@@ -112,7 +112,7 @@ AVBD also includes a SPD hessian approximation which greatly improves stability,
 
 ## How does Vertex Block Descent run?
 
-VBD's high level design is simple, really just 3 steps. AVBD adds another 2 steps. The code below is simplified but not far off.
+VBD's high level design is simple, it's really just 3 steps. AVBD adds another 2 steps.
 
 ### 1. Integrate the positions
 
