@@ -43,7 +43,7 @@ Thanks to Anka He Chen and Chris Giles for making these open source with permiss
   - [x] [Hessian LDLT decomposition](https://github.com/savant117/avbd-demo2d/blob/main/source/maths.h)
   - [x] [SPD hessian approximation (section 3.5)](https://graphics.cs.utah.edu/research/projects/avbd/Augmented_VBD-SIGGRAPH25.pdf)
 
-### From Vellum
+### From [Vellum](https://www.sidefx.com/docs/houdini/vellum/overview.html)
   - [x] Vellum integration (1st order, 2nd order)
   - [x] Self and external collisions (very buggy, to be replaced soon)
 
