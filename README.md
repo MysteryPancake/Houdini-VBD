@@ -67,7 +67,7 @@ Thanks to Anka He Chen and Chris Giles for making these open source with permiss
 
 ## What's Vertex Block Descent?
 
-VBD is very similar to Vellum. You might call it Vellum 2.
+VBD is very similar to Vellum. The main differences are constraints and collisions.
 
 Vellum uses a technique called [XPBD (Extended Position-Based Dynamics)](https://matthias-research.github.io/pages/publications/XPBD.pdf). XPBD uses constraints to simulate soft body behaviour. Constraints are solved in parallel workgroups (colors) in OpenCL for better performance. Colors are groups of constraints that aren't directly connected.
 
