@@ -79,7 +79,16 @@ VBD constraints are similar, but they're defined in terms of energy instead. The
 
 <img src="./images/energyreduction.png" width="700">
 
-The diagram above is for mass-spring energy, based on the rest length of each edge. In this case it's not so different to XPBD, but the idea of minimizing energy is different to minimizing distance.
+The image above is for mass-spring energy, based on the rest length like in XPBD. Rather than directly using the rest length, the energy contribution gets accumulated to a force gradient and a hessian matrix. Once all the energy contributions are added, the point gets moved.
+
+```js
+// For each connected constraint
+v@force += constraintGradient;
+3@hessian += constraintHessian;
+
+// Once all energy contributions are accumulated
+v@P += force * invert(hessian);
+```
 
 Here's a comparison between Vellum and VBD:
 
@@ -297,12 +306,12 @@ In AVBD, `lambda` and `penalty` change the results of `accumulateMaterialForceAn
 vector force = 0;
 matrix3 hessian = 0;
 
-// Add influences to force elements and hessian
-accumulateInertiaForceAndHessian(force, hessian); // Influences due to mass and inertia
-accumulateMaterialForceAndHessian(force, hessian); // Influences due to constraints (eg mass-spring or neo-hookean)
-accumulateDampingForceAndHessian(force, hessian); // Influences due to damping
-accumulateBoundaryForceAndHessian(force, hessian); // Influences due to boundaries (eg floor planes)
-accumulateCollisionForceAndHessian(force, hessian); // Influences due to collisions
+// Add contributions to force elements and hessian
+accumulateInertiaForceAndHessian(force, hessian); // Contributions due to mass and inertia
+accumulateMaterialForceAndHessian(force, hessian); // Contributions due to constraints (eg mass-spring or neo-hookean)
+accumulateDampingForceAndHessian(force, hessian); // Contributions due to damping
+accumulateBoundaryForceAndHessian(force, hessian); // Contributions due to boundaries (eg floor planes)
+accumulateCollisionForceAndHessian(force, hessian); // Contributions due to collisions
 
 v@P += force * invert(hessian); // Reduce the variational energy of the system
 ```
