@@ -79,14 +79,17 @@ VBD constraints are similar, but they're defined in terms of energy instead. The
 
 <img src="./images/energyreduction.png" width="700">
 
-The image above is for mass-spring energy, based on the rest length like in XPBD. Rather than directly using the rest length, the energy contribution gets accumulated to a force gradient and a hessian matrix. Once all the energy contributions are added, the point gets moved.
+The image above is for mass-spring energy, based on the rest length like in XPBD. Rather than directly using the rest length, the energy contributions get added to a force gradient and a hessian matrix. Once all the contributions are added, the position gets updated.
 
 ```js
-// For each connected constraint
-v@force += constraintGradient;
-3@hessian += constraintHessian;
+vector force = 0;
+matrix3 hessian = 0;
 
-// Once all energy contributions are accumulated
+// For each connected constraint
+force += constraintGradient;
+hessian += constraintHessian;
+
+// Reduce the variational energy of the system
 v@P += force * invert(hessian);
 ```
 
