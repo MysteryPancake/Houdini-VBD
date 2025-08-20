@@ -27,7 +27,7 @@ Thanks to Anka He Chen and Chris Giles for making these open source with permiss
 
 ### From [Gaia](https://github.com/AnkaChan/Gaia)
   - [x] [Neo-Hookean constraints](https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_NeoHookean.cpp) (for tetrahedrons)
-  - [x] Damping
+  - [x] General damping
 
 ### From [NVIDIA Warp](https://github.com/NVIDIA/warp/blob/main/warp/sim/integrator_vbd.py)
   - [x] Floor collisions
@@ -55,7 +55,6 @@ Thanks to Anka He Chen and Chris Giles for making these open source with permiss
   - [ ] Update all existing constraints to AVBD
 - [ ] Steal from myself
   - [ ] SDF collisions
-  - [ ] Velocity damping
 - [ ] Touch grass
 
 ## What's Vertex Block Descent?
