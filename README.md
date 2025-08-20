@@ -75,7 +75,7 @@ Cloth is a good example of a soft body. It's easy to bend but hard to stretch. I
 
 <img src="./images/edging.png" width="700">
 
-VBD constraints are similar, but they're defined in terms of energy instead. The goal is reducing overall variational energy by reducing local energy per point. VBD constraints run over each point rather than each prim, meaning less workgroups (colors) overall. However, each point typically has to loop over its neighbours to compute the energy, so the performance isn't necessarily better. The Graph Color node allows workgroups for points as well as prims, so it works both for VBD and XPBD.
+VBD constraints are similar, but they're defined in terms of energy instead. The goal is reducing overall variational energy by reducing local energy per point. VBD constraints run over each point rather than each prim, meaning less workgroups (colors) overall. The Graph Color node allows workgroups for points as well as prims, so it works both for VBD and XPBD.
 
 <img src="./images/energyreduction.png" width="700">
 
@@ -85,7 +85,7 @@ Here's a quick comparison between VBD and XPBD:
 
 |  | VBD | Vellum (XPBD) | Advantage | Disadvantage |
 | --- | --- | --- | --- | --- |
-| **Runs over** | <p align="center">Point colors<br><img src="./images/color_points.png"></p> | <p align="center">Colors per constraint<br><img src="./images/color_prims.png"></p> | Less colors/workgroups, faster for parallel processing | Takes longer to converge for stiff objects, partly because it updates 1 point per iteration instead of 2 (one on each side of the constraint). Not necessarily faster, since each point typically loops over its neighbours |
+| **Runs over** | <p align="center">Point colors<br><img src="./images/color_points.png"></p> | <p align="center">Colors per constraint<br><img src="./images/color_prims.png"></p> | Less colors/workgroups, faster for parallel processing | Takes longer to converge for stiff objects |
 | **Constraints** | Energy based (eg mass-spring energy or neo-hookean energy) | XPBD based (eg distance constraints) | Better for larger mass ratios | Randomly explodes due to hessian matrix inversion |
 | **Iterations** | Gauss-Seidel | Gauss-Seidel (for constraint iterations) and Jacobi (for smoothing iterations) | Reaches a global solution faster | Might be less stable |
 
@@ -112,6 +112,18 @@ AVBD also includes rigid bodies in a bizarre and unconventional way. Instead of 
 I think this is cheating and goes against the design of VBD, but I'll eventually include packed prims and their rotations in the hessians. For now AVBD constraints solve translation but not rigid rotation.
 
 AVBD also includes a SPD hessian approximation which greatly improves stability, used on all constraints by default. However it causes instability for neo-hookean constraints, so it's optional for them.
+
+## Is VBD faster than Vellum?
+
+Despite the hype, sadly not. In the best case it's the same speed as Vellum. It's practically impossible for it to be faster.
+
+On paper VBD is faster because it runs over points, which have less graph colors than prims. Graph colors control the number of workgroups, meaning how many points can be processed at the same time.
+
+<img src="./images/vellum_vs_vbd.png" width="600">
+
+While it's true points have less graph colors, for all constraint types in VBD, each point loops over its connections to compute their energy contributions. This adds tons of extra operations, often 2-4x more than Vellum.
+
+Even worse, these operations are expensive matrix calculations. The worst culprit is neo-hookean constraints. Tetrahedral meshes are densely connected, and each tet computes a 9x9 matrix!
 
 ## How does Vertex Block Descent run?
 
@@ -221,9 +233,9 @@ v@v = (v@P - v@pprevious) / f@TimeInc;
 
 Like with Vellum (XPBD), stiff objects are limited by the number of constraint iterations and substeps. The more constraint iterations and substeps, the more accurately stiff objects are resolved.
 
-VBD also has accelerated convergence method meant to improve convergence for stiff constraints. It's named "Improve Convergence" in the Advanced tab and disabled by default, as it tends to explode with high values.
+VBD also has accelerated convergence method meant to improve convergence for stiff constraints. It's named "Improve Convergence" in the Advanced tab and disabled by default, as it tends to explode with high values. AVBD also adds dual solving meant to improve stiffness. This is used for all AVBD constraints.
 
-AVBD also adds dual solving meant to improve stiffness. This is used for all AVBD constraints.
+Personally I think Vellum has a huge advantage over VBD for stiffness, since it updates prims instead of points. For distance constraints this means both sides of the edge. You can easily match the target length just by spacing the points to the exact distance. After one iteration, you can guarantee the edge is the right length. This is much harder with VBD, since it only updates one point at a time.
 
 ## Why do collisions not work sometimes?
 
