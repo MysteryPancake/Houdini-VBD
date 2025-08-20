@@ -86,11 +86,15 @@ Here's a quick comparison between VBD and XPBD:
 | **Constraints** | Energy based (eg mass-spring energy or neo-hookean energy) | XPBD based (eg distance constraints) | Better for larger mass ratios | Randomly explodes due to hessian matrix inversion |
 | **Iterations** | Gauss-Seidel | Gauss-Seidel (for constraint iterations) and Jacobi (for smoothing iterations) | Reaches a global solution faster | Might be less stable |
 
-The most important part of VBD is the energy definition, but no one seems to agree on this.
+The most important part of VBD is the energy definition, which depends on the constraint type. Here's a few:
+- Mass-spring (from [TinyVBD](https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_MassSpring.cpp) but [removed from Gaia](https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_MassSpring.cpp))
+- StVK (from [NVIDIA Warp](https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_MassSpring.cpp))
+- Neo-hookean (from [Gaia](https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_NeoHookean.cpp))
+- Spring (from [AVBD](https://github.com/savant117/avbd-demo2d/blob/main/source/spring.cpp), mass-spring but with a different formula)
+- Joint (from [AVBD](https://github.com/savant117/avbd-demo2d/blob/main/source/joint.cpp))
+- Motor (from [AVBD](https://github.com/savant117/avbd-demo2d/blob/main/source/motor.cpp))
 
-I've seen many different energy definitions, including mass-spring (used by [TinyVBD](https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_MassSpring.cpp) and [AVBD](https://github.com/savant117/avbd-demo2d/blob/main/source/spring.cpp#L40), but [removed from Gaia](https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_MassSpring.cpp)), StVK (used by [NVIDIA Warp](https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_MassSpring.cpp)) and neo-hookean (used by [Gaia](https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_NeoHookean.cpp)).
-
-Currently mass-spring and neo-hookean are supported, StVK is coming soon.
+I've implemented most of these as different constraint types, so you can connect them together like in Vellum.
 
 ## What's Augmented Vertex Block Descent?
 
@@ -98,7 +102,7 @@ AVBD is an extension to VBD mainly to improve stiffness. It changes stiffness ad
 
 As you might expect, looping over both the points and the prims makes the solver 2x slower. Luckily I found it gives near identical results to move the dual solve logic into the point update, and 2x faster speed. It even works better since many points belong to each prim, so 10 connected points means 10x more updates to that prim.
 
-Adaptive stiffness currently only affects AVBD constraint types. Eventually I'll rewrite the other VBD constraints to use it too.
+Adaptive stiffness currently only affects AVBD constraints. Eventually I'll rewrite the other VBD constraints to use it too.
 
 AVBD also includes rigid bodies in a bizarre and unconventional way. Instead of solving each point of the rigid body, they represent the entire body as one point (like a packed prim). This means each point can have a rigid rotation, included in the hessian for better results.
 
@@ -213,7 +217,7 @@ Like with Vellum (XPBD), stiff objects are limited by the number of constraint i
 
 VBD also has accelerated convergence method meant to improve convergence for stiff constraints. It's named "Improve Convergence" in the Advanced tab and disabled by default, as it tends to explode with high values.
 
-AVBD also adds dual solving meant to improve stiffness. This is used for all AVBD constraint types.
+AVBD also adds dual solving meant to improve stiffness. This is used for all AVBD constraints.
 
 ## Why do collisions not work sometimes?
 
