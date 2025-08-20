@@ -26,6 +26,7 @@ Thanks to Anka He Chen and Chris Giles for making these open source with permiss
   - [x] Hessian direct inverse
 
 ### From [Gaia](https://github.com/AnkaChan/Gaia)
+  - [x] VBD integration (inertia, inertia and acceleration, adaptive)
   - [x] [Neo-Hookean constraints](https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_NeoHookean.cpp) (for tetrahedrons)
   - [x] General damping
 
@@ -41,6 +42,10 @@ Thanks to Anka He Chen and Chris Giles for making these open source with permiss
   - [x] Breaking constraints
   - [x] [Hessian LDLT decomposition](https://github.com/savant117/avbd-demo2d/blob/main/source/maths.h)
   - [x] [SPD hessian approximation (section 3.5)](https://graphics.cs.utah.edu/research/projects/avbd/Augmented_VBD-SIGGRAPH25.pdf)
+
+### From Vellum
+  - [x] Vellum integration (1st order, 2nd order)
+  - [x] Self and external collisions (very buggy, to be replaced soon)
 
 ## Todo
 - [ ] Steal from [NVIDIA Warp](https://github.com/NVIDIA/warp)
