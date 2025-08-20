@@ -13,11 +13,9 @@
 {
     if (@mass <= 0 || @stopped) return; // Skip pinned points
     
-#if use_gravity
     // Gravity gets added directly to the velocity
     // This is the same as adding it to the inertia as @gravity * @TimeInc * @TimeInc
     @v.set(@v + @gravity * @TimeInc);
-#endif
 
     // First order integration, same as Vellum
     const fpreal3 inertia = @P + @v * @TimeInc;
