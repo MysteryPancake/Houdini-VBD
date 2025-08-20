@@ -127,110 +127,6 @@ While it's true points have less graph colors, for all constraints in VBD each p
 
 Even worse, these operations are expensive matrix calculations. The worst culprit is neo-hookean constraints. Tetrahedral meshes are densely connected, and each tet computes a 9x9 matrix!
 
-## How does Vertex Block Descent run?
-
-VBD's high level design is simple, it's really just 3 steps. AVBD adds another 2 steps.
-
-### 1. Integrate the positions
-
-Add the velocity to the position (same as Vellum). VBD uses a warmstarting strategy to scale the gravity term below.
-
-```js
-v@pprevious = v@P;
-
-// First-order integration, same as Vellum
-v@v += v@gravity * f@TimeInc;
-v@inertia = v@P + v@v * f@TimeInc;
-v@P = v@inertia;
-```
-
-| [OpenCL version](./ocl/forwardStep.cl) | [VEX version (outdated)](./vex/forwardStep.c) |
-| --- | --- |
-
-### 2. Update the dual variables (AVBD)
-
-AVBD adjusts the stiffness based on `lambda` and `penalty`. They get dampened by `alpha` and `gamma` before constraint solving to prevent explosions.
-
-```js
-// Warmstart the dual variables and penalty parameters (Eq. 19)
-@lambda *= alpha * gamma;
-
-// Penalty is safely clamped to a minimum and maximum value
-@penalty = clamp(@penalty * gamma, PENALTY_MIN, PENALTY_MAX);
-
-// If it's not a hard constraint, we don't let the penalty exceed the material stiffness
-@penalty = min(@penalty, f@stiffness);
-```
-
-| [OpenCL version](./ocl/forwardStepDual.cl) | [Python version](https://github.com/savant117/avbd-demo2d/blob/main/source/solver.cpp#L105) |
-| --- | --- |
-
-### 3. Apply the constraints
-
-This is the hard part. The core of VBD is moving the position based on a force gradient and a hessian matrix.
-
-When the hessian doesn't explode, moving the position reduces the overall variational energy.
-
-In AVBD, `lambda` and `penalty` change the results of `accumulateMaterialForceAndHessian()`.
-
-> [!CAUTION]
-> **This should be run in workgroups based on graph coloring!**
->
-> If points move while their neighbours access them (like if running in sequential order), it breaks the assumption used by VBD:
-> 
->  > We adjust each vertex separately, assuming the others remain fixed
-> 
-> This causes growing error each iteration, leading VBD to explode much more than usual.
-
-```js
-vector force = 0;
-matrix3 hessian = 0;
-
-// Add influences to force elements and hessian
-accumulateInertiaForceAndHessian(force, hessian); // Influences due to mass and inertia
-accumulateMaterialForceAndHessian(force, hessian); // Influences due to constraints (eg mass-spring or neo-hookean)
-accumulateDampingForceAndHessian(force, hessian); // Influences due to damping
-accumulateBoundaryForceAndHessian(force, hessian); // Influences due to boundaries (eg floor planes)
-accumulateCollisionForceAndHessian(force, hessian); // Influences due to collisions
-
-v@P += force * invert(hessian); // Reduce the variational energy of the system
-```
-
-| [OpenCL version](./ocl/solveConstraints.cl) | [VEX version (outdated)](./vex/solveConstraints.c) |
-| --- | --- |
-
-### 4. Dual update (AVBD)
-
-Clamp `lambda` and `penalty` to prevent them exploding again. The `C` variable depends on the constraint type.
-
-```js
-// Use lambda as 0 if it's not a hard constraint
-float lambdaTmp = isinf(stiffness) ? lambda[i] : 0;
-
-// Update lambda (Eq 11)
-lambdaTmp = lambda[i] = clamp(penalty[i] * C[i] + lambdaTmp, fmin[i], fmax[i]);
-
-// Update the penalty parameter and clamp to material stiffness if we are within the force bounds (Eq. 16)
-if (lambdaTmp > fmin[i] && lambdaTmp < fmax[i]) {
-    penalty[i] = min(penalty[i] + beta * abs(C[i]), min(PENALTY_MAX, stiffness));
-}
-```
-
-| [OpenCL version](https://github.com/search?q=repo%3AMysteryPancake%2FHoudini-VBD%20dualUpdate&type=code) | [Python version](https://github.com/savant117/avbd-demo2d/blob/main/source/solver.cpp#L205) |
-| --- | --- |
-
-### 5. Update the velocities
-
-Update the velocities based on the change in position (same as Vellum).
-
-```js
-// First-order velocities
-v@v = (v@P - v@pprevious) / f@TimeInc;
-```
-
-| [OpenCL version](./ocl/updateVelocity.cl) | [VEX version (outdated)](./vex/updateVelocity.c) |
-| --- | --- |
-
 ## Why does stiffness have a limit?
 
 Like with Vellum (XPBD), stiff objects are limited by the number of constraint iterations and substeps. The more constraint iterations and substeps, the more accurately stiff objects are resolved.
@@ -337,3 +233,107 @@ To me it reads more like a [rigid body solver](https://youtu.be/zpn49cadAnE?si=g
 I'm wondering how this applies to a cloth sim for example. Would you create a rigid body for each vertex of the cloth? In this case, what role does the rotation have?
 
 > No response yet :(
+
+## How does Vertex Block Descent run?
+
+VBD's high level design is simple, it's really just 3 steps. AVBD adds another 2 steps.
+
+### 1. Integrate the positions
+
+Add the velocity to the position (same as Vellum). VBD uses a warmstarting strategy to scale the gravity term below.
+
+```js
+v@pprevious = v@P;
+
+// First-order integration, same as Vellum
+v@v += v@gravity * f@TimeInc;
+v@inertia = v@P + v@v * f@TimeInc;
+v@P = v@inertia;
+```
+
+| [OpenCL version](./ocl/forwardStep.cl) | [VEX version (outdated)](./vex/forwardStep.c) |
+| --- | --- |
+
+### 2. Update the dual variables (AVBD)
+
+AVBD adjusts the stiffness based on `lambda` and `penalty`. They get dampened by `alpha` and `gamma` before constraint solving to prevent explosions.
+
+```js
+// Warmstart the dual variables and penalty parameters (Eq. 19)
+@lambda *= alpha * gamma;
+
+// Penalty is safely clamped to a minimum and maximum value
+@penalty = clamp(@penalty * gamma, PENALTY_MIN, PENALTY_MAX);
+
+// If it's not a hard constraint, we don't let the penalty exceed the material stiffness
+@penalty = min(@penalty, f@stiffness);
+```
+
+| [OpenCL version](./ocl/forwardStepDual.cl) | [Python version](https://github.com/savant117/avbd-demo2d/blob/main/source/solver.cpp#L105) |
+| --- | --- |
+
+### 3. Apply the constraints
+
+This is the hard part. The core of VBD is moving the position based on a force gradient and a hessian matrix.
+
+When the hessian doesn't explode, moving the position reduces the overall variational energy.
+
+In AVBD, `lambda` and `penalty` change the results of `accumulateMaterialForceAndHessian()`.
+
+> [!CAUTION]
+> **This should be run in workgroups based on graph coloring!**
+>
+> If points move while their neighbours access them (like if running in sequential order), it breaks the assumption used by VBD:
+> 
+>  > We adjust each vertex separately, assuming the others remain fixed
+> 
+> This causes growing error each iteration, leading VBD to explode much more than usual.
+
+```js
+vector force = 0;
+matrix3 hessian = 0;
+
+// Add influences to force elements and hessian
+accumulateInertiaForceAndHessian(force, hessian); // Influences due to mass and inertia
+accumulateMaterialForceAndHessian(force, hessian); // Influences due to constraints (eg mass-spring or neo-hookean)
+accumulateDampingForceAndHessian(force, hessian); // Influences due to damping
+accumulateBoundaryForceAndHessian(force, hessian); // Influences due to boundaries (eg floor planes)
+accumulateCollisionForceAndHessian(force, hessian); // Influences due to collisions
+
+v@P += force * invert(hessian); // Reduce the variational energy of the system
+```
+
+| [OpenCL version](./ocl/solveConstraints.cl) | [VEX version (outdated)](./vex/solveConstraints.c) |
+| --- | --- |
+
+### 4. Dual update (AVBD)
+
+Clamp `lambda` and `penalty` to prevent them exploding again. The `C` variable depends on the constraint type.
+
+```js
+// Use lambda as 0 if it's not a hard constraint
+float lambdaTmp = isinf(stiffness) ? lambda[i] : 0;
+
+// Update lambda (Eq 11)
+lambdaTmp = lambda[i] = clamp(penalty[i] * C[i] + lambdaTmp, fmin[i], fmax[i]);
+
+// Update the penalty parameter and clamp to material stiffness if we are within the force bounds (Eq. 16)
+if (lambdaTmp > fmin[i] && lambdaTmp < fmax[i]) {
+    penalty[i] = min(penalty[i] + beta * abs(C[i]), min(PENALTY_MAX, stiffness));
+}
+```
+
+| [OpenCL version](https://github.com/search?q=repo%3AMysteryPancake%2FHoudini-VBD%20dualUpdate&type=code) | [Python version](https://github.com/savant117/avbd-demo2d/blob/main/source/solver.cpp#L205) |
+| --- | --- |
+
+### 5. Update the velocities
+
+Update the velocities based on the change in position (same as Vellum).
+
+```js
+// First-order velocities
+v@v = (v@P - v@pprevious) / f@TimeInc;
+```
+
+| [OpenCL version](./ocl/updateVelocity.cl) | [VEX version (outdated)](./vex/updateVelocity.c) |
+| --- | --- |
