@@ -112,7 +112,7 @@ AVBD also includes a SPD hessian approximation which greatly improves stability,
 
 ## How does Vertex Block Descent run?
 
-VBD's high level design is simple, it's really just 3 steps. AVBD adds another 2 steps.
+VBD's high level design is simple, really just 3 steps. AVBD adds another 2 steps. The code below is simplified but not far off.
 
 ### 1. Integrate the positions
 
@@ -122,7 +122,8 @@ Add the velocity to the position (same as Vellum). VBD uses a warmstarting strat
 v@pprevious = v@P;
 
 // First-order integration, same as Vellum
-v@inertia = v@P + v@v * f@TimeInc * v@gravity * f@TimeInc * f@TimeInc;
+v@v += v@gravity * f@TimeInc;
+v@inertia = v@P + v@v * f@TimeInc;
 v@P = v@inertia;
 ```
 
