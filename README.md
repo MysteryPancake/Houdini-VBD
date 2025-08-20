@@ -115,7 +115,7 @@ AVBD also includes a SPD hessian approximation which greatly improves stability,
 
 ## Is VBD faster than Vellum?
 
-Despite the hype, sadly not. It's practically impossible for it to be faster than Vellum.
+Despite the hype, sadly not. It's near impossible for VBD to be faster than Vellum.
 
 On paper VBD is faster because it runs over points, which have less graph colors than prims. Graph colors control the number of workgroups, meaning how many points can be processed at the same time.
 
