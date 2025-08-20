@@ -39,7 +39,7 @@ Thanks to Anka He Chen and Chris Giles for making these open source with permiss
   - [x] [Joint constraints](https://github.com/savant117/avbd-demo2d/blob/main/source/joint.cpp) (currently not including rigid rotation)
   - [x] Dual constraint updates
   - [x] Breaking constraints
-  - [x] [Hessian LDLT decomposition](https://graphics.cs.utah.edu/research/projects/avbd/Augmented_VBD-SIGGRAPH25.pdf)
+  - [x] [Hessian LDLT decomposition](https://github.com/savant117/avbd-demo2d/blob/main/source/maths.h)
   - [x] [SPD hessian approximation (section 3.5)](https://graphics.cs.utah.edu/research/projects/avbd/Augmented_VBD-SIGGRAPH25.pdf)
 
 ## Todo
@@ -55,6 +55,7 @@ Thanks to Anka He Chen and Chris Giles for making these open source with permiss
   - [ ] Update all existing constraints to AVBD
 - [ ] Steal from myself
   - [ ] SDF collisions
+  - [ ] Velocity damping
 - [ ] Touch grass
 
 ## What's Vertex Block Descent?
