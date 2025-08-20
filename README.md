@@ -85,7 +85,7 @@ Here's a quick comparison between VBD and XPBD:
 
 |  | VBD | Vellum (XPBD) | Advantage | Disadvantage |
 | --- | --- | --- | --- | --- |
-| **Runs over** | <p align="center">Point colors<br><img src="./images/color_points.png" height="150"></p> | <p align="center">Colors per constraint<br><img src="./images/color_prims.png" height="150"></p> | Less colors/workgroups, faster for parallel processing | Takes longer to converge for stiff objects |
+| **Runs over** | <p align="center">Point colors<br><img src="./images/color_points.png" height="120"></p> | <p align="center">Prim colors<br><img src="./images/color_prims.png" height="120"></p> | Less colors/workgroups, faster for parallel processing | Takes longer to converge for stiff objects |
 | **Constraints** | Energy based (eg mass-spring energy or neo-hookean energy) | XPBD based (eg distance constraints) | Better for larger mass ratios | Randomly explodes due to hessian matrix inversion |
 | **Iterations** | Gauss-Seidel | Gauss-Seidel (for constraint iterations) and Jacobi (for smoothing iterations) | Reaches a global solution faster | Might be less stable |
 
@@ -115,13 +115,13 @@ AVBD also includes a SPD hessian approximation which greatly improves stability,
 
 ## Is VBD faster than Vellum?
 
-Despite the hype, sadly not. In the best case it's the same speed as Vellum. It's practically impossible for it to be faster.
+Despite the hype, sadly not. It's practically impossible for it to be faster than Vellum.
 
 On paper VBD is faster because it runs over points, which have less graph colors than prims. Graph colors control the number of workgroups, meaning how many points can be processed at the same time.
 
 <img src="./images/vellum_vs_vbd.png" height="500">
 
-While it's true points have less graph colors, for all constraint types in VBD, each point loops over its connections to compute their energy contributions. This adds tons of extra operations, often 2-4x more than Vellum!
+While it's true points have less graph colors, for all constraints in VBD each point loops over its connections to compute their energy contributions. This adds tons of extra operations, often 2x more than Vellum!
 
 <img src="./images/vellum_vs_vbd2.png" height="500">
 
