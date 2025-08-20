@@ -112,16 +112,18 @@ AVBD also includes a SPD hessian approximation which greatly improves stability,
 
 ## How does Vertex Block Descent run?
 
-VBD is really just 3 steps. AVBD adds another 2 steps. The integration and velocity steps are nearly identical to XPBD.
+VBD's high level design is simple, it's really just 3 steps. AVBD adds another 2 steps.
 
 ### 1. Integrate the positions
 
 Add the velocity to the position (same as Vellum). VBD uses a warmstarting strategy to scale the gravity term below.
 
 ```js
-// First-order integration
 v@pprevious = v@P;
-v@P += v@v * f@TimeInc * v@gravity * f@TimeInc * f@TimeInc;
+
+// First-order integration, same as Vellum
+v@inertia = v@P + v@v * f@TimeInc * v@gravity * f@TimeInc * f@TimeInc;
+v@P = v@inertia;
 ```
 
 | [OpenCL version](./ocl/forwardStep.cl) | [VEX version (outdated)](./vex/forwardStep.c) |
@@ -147,9 +149,9 @@ AVBD adjusts the stiffness based on `lambda` and `penalty`. They get dampened by
 
 ### 3. Apply the constraints
 
-The core of VBD is moving the position based on a force gradient and a hessian matrix.
+This is the hard part. The core of VBD is moving the position based on a force gradient and a hessian matrix.
 
-If the hessian inverts without exploding, moving the position should reduce the overall variational energy.
+When the hessian doesn't explode, moving the position reduces the overall variational energy.
 
 In AVBD, `lambda` and `penalty` change the results of `accumulateMaterialForceAndHessian()`.
 
