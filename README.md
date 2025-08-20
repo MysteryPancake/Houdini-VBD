@@ -137,7 +137,9 @@ VBD also has accelerated convergence method meant to improve convergence for sti
 
 Personally I think Vellum has a huge advantage over VBD for stiffness, since it updates prims instead of points. For distance constraints this means both sides of the edge. You can easily match the target length just by spacing the points to the exact distance. After one iteration, you can guarantee the edge is the right length. This is much harder with VBD, since it only updates one point at a time.
 
-## Why do collisions not work sometimes?
+## Why are collisions so bad?
+
+I'm still working on collisions, they aren't been implemented properly yet (apart from ground collisions).
 
 VBD solves collisions as soft constraints, meaning collisions get added onto the force and hessian like everything else.
 
