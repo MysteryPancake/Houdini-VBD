@@ -47,6 +47,7 @@ Thanks to Anka He Chen and Chris Giles for making these open source with permiss
   - [x] Vellum integration (1st order, 2nd order)
   - [x] Self and external collisions (very buggy, to be replaced soon)
   - [x] Stopped, permanent and animated pin support
+  - [x] Custom forces and sources support
 
 ## Todo
 - [ ] Steal from [NVIDIA Warp](https://github.com/NVIDIA/warp)
