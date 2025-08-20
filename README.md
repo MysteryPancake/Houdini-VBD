@@ -93,13 +93,13 @@ AVBD is an extension to VBD mainly to improve stiffness. It changes stiffness ad
 
 As you might expect, looping over both the points and the prims makes the solver 2x slower. Luckily I found it gives near identical results to move the dual solve logic into the point update, and 2x faster speed. It even works better since many points belong to each prim, so 10 connected points means 10x more updates to that prim.
 
-Adaptive stiffness currently only affects AVBD constraint types, such as AVBD Spring and AVBD Hinge. Eventually I'll rewrite the VBD constraints to use it too.
+Adaptive stiffness currently only affects AVBD constraint types. Eventually I'll rewrite the other VBD constraints to use it too.
 
 AVBD also includes rigid bodies in a bizarre and unconventional way. Instead of solving each point of the rigid body, they represent the entire body as one point (like a packed prim). This means each point can have a rigid rotation, included in the hessian for better results.
 
-In my opinion this is cheating and goes against the design of VBD, but I'll eventually include packed prims and their rotations in the hessians. For now the AVBD constraints solve translation but not rigid rotation.
+In my opinion this is cheating and goes against the design of VBD, but I'll eventually include packed prims and their rotations in the hessians. For now AVBD constraints solve translation but not rigid rotation.
 
-AVBD also includes a SPD hessian approximation which greatly improves stability, so it's used on all constraints by default. However it causes instability for neo-hookean constraints, so it's optional for them.
+AVBD also includes a SPD hessian approximation which greatly improves stability, used on all constraints by default. However it causes instability for neo-hookean constraints, so it's optional for them.
 
 ## How does Vertex Block Descent run?
 
