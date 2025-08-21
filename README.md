@@ -85,7 +85,7 @@ The image above is for mass-spring energy, based on the rest length like in XPBD
 vector force = 0;
 matrix3 hessian = 0;
 
-// For each connected constraint
+// For each connected constraint (and extra forces)
 force += constraintGradient;
 hessian += constraintHessian;
 
