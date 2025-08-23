@@ -38,9 +38,9 @@ Thanks to Anka He Chen and Chris Giles for making these open source with permiss
   - [x] General damping
 
 ### From [NVIDIA Warp](https://github.com/NVIDIA/warp/blob/main/warp/sim/integrator_vbd.py)
-  - [x] Floor collisions
-  - [x] Floor friction
-  - [x] Floor damping
+  - [x] Ground collisions
+  - [x] Ground friction
+  - [x] Ground damping
 
 ### From [AVBD-2D](https://github.com/savant117/avbd-demo2d)
   - [x] [Spring constraints](https://github.com/savant117/avbd-demo2d/blob/main/source/spring.cpp) (currently not including rigid rotation)
@@ -318,9 +318,9 @@ matrix3 hessian = 0;
 
 // Add contributions to force elements and hessian
 accumulateInertiaForceAndHessian(force, hessian); // Contributions due to mass and inertia
-accumulateMaterialForceAndHessian(force, hessian); // Contributions due to constraints (eg mass-spring or neo-hookean)
+accumulateMaterialForceAndHessian(force, hessian); // Contributions due to connected constraints (eg mass-spring)
 accumulateDampingForceAndHessian(force, hessian); // Contributions due to damping
-accumulateBoundaryForceAndHessian(force, hessian); // Contributions due to boundaries (eg floor planes)
+accumulateBoundaryForceAndHessian(force, hessian); // Contributions due to boundaries (eg ground plane)
 accumulateCollisionForceAndHessian(force, hessian); // Contributions due to collisions
 
 v@P += force * invert(hessian); // Reduce the variational energy of the system
