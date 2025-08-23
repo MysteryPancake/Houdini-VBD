@@ -18,6 +18,13 @@ Thanks to Anka He Chen and Chris Giles for making these open source with permiss
 | [Download the HIP file!](../../releases/latest) |
 | --- |
 
+> [!WARNING]
+> Self and external collisions are not implemented correctly yet, and are very buggy.
+>
+> Ground collisions are correct, but need to be updated to use hard constraints from AVBD.
+>
+> I'm working on collisions at the moment.
+
 ## Features
 
 ### From [TinyVBD](https://github.com/AnkaChan/TinyVBD)
