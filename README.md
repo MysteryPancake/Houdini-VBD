@@ -29,7 +29,7 @@ Thanks to Anka He Chen and Chris Giles for making these open source with permiss
 
 ### From [TinyVBD](https://github.com/AnkaChan/TinyVBD)
   - [x] [Mass-spring constraints](https://github.com/AnkaChan/TinyVBD/blob/main/main.cpp#L381) (for strings)
-  - [x] [Accelerated convergence method](https://graphics.cs.utah.edu/research/projects/vbd/vbd-siggraph2024.pdf) (section 3.8)
+  - [x] [Accelerated convergence method](https://github.com/AnkaChan/TinyVBD/blob/main/main.cpp#L429) (section 3.8)
   - [x] [Hessian direct inverse](https://github.com/AnkaChan/CuMatrix/blob/main/CuMatrix/MatrixOps/CuMatrix.h#L235)
 
 ### From [Gaia](https://github.com/AnkaChan/Gaia)
