@@ -21,7 +21,7 @@ Thanks to Anka He Chen and Chris Giles for making these open source with permiss
 > [!WARNING]
 > Self and external collisions are not implemented correctly yet, and are [very buggy](#why-are-collisions-so-bad).
 >
-> Ground collisions are correct, but need to be updated to use hard constraints from AVBD.
+> Ground collisions are correct to VBD, but need to be updated to use hard constraints from AVBD.
 >
 > I'm working on collisions at the moment.
 
