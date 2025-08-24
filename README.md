@@ -29,26 +29,26 @@ Thanks to Anka He Chen and Chris Giles for making these open source with permiss
 
 ### From [TinyVBD](https://github.com/AnkaChan/TinyVBD)
   - [x] [Mass-spring constraints](https://github.com/AnkaChan/TinyVBD/blob/main/main.cpp#L381) (for strings)
-  - [x] [Accelerated convergence method (section 3.8)](https://graphics.cs.utah.edu/research/projects/vbd/vbd-siggraph2024.pdf)
-  - [x] Hessian direct inverse
+  - [x] [Accelerated convergence method](https://graphics.cs.utah.edu/research/projects/vbd/vbd-siggraph2024.pdf) (section 3.8)
+  - [x] [Hessian direct inverse](https://github.com/AnkaChan/CuMatrix/blob/main/CuMatrix/MatrixOps/CuMatrix.h#L235)
 
 ### From [Gaia](https://github.com/AnkaChan/Gaia)
-  - [x] VBD integration (inertia, inertia and acceleration, adaptive)
+  - [x] [VBD integration](https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_BaseMaterial.cpp#L18) (inertia, inertia and acceleration, adaptive)
   - [x] [Neo-hookean constraints](https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_NeoHookean.cpp) (for tetrahedrons)
-  - [x] General damping
+  - [x] [General damping](https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBDPhysics.cpp#L2786)
 
 ### From [NVIDIA Warp](https://github.com/NVIDIA/warp/blob/main/warp/sim/integrator_vbd.py)
-  - [x] Ground collisions
-  - [x] Ground friction
-  - [x] Ground damping
+  - [x] [Ground collisions](https://github.com/NVIDIA/warp/blob/main/warp/sim/integrator_vbd.py#L513)
+  - [x] [Ground friction](https://github.com/NVIDIA/warp/blob/main/warp/sim/integrator_vbd.py#L1188)
+  - [x] [Ground damping](https://github.com/NVIDIA/warp/blob/main/warp/sim/integrator_vbd.py#L534)
 
 ### From [AVBD-2D](https://github.com/savant117/avbd-demo2d)
   - [x] [Spring constraints](https://github.com/savant117/avbd-demo2d/blob/main/source/spring.cpp) (currently missing rigid rotation)
   - [x] [Joint constraints](https://github.com/savant117/avbd-demo2d/blob/main/source/joint.cpp) (currently missing rigid rotation)
-  - [x] Dual constraint updates
-  - [x] Breaking constraints
+  - [x] [Dual constraint updates](https://github.com/savant117/avbd-demo2d/blob/main/source/solver.cpp#L205)
+  - [x] [Breaking constraints](https://github.com/savant117/avbd-demo2d/blob/main/source/solver.cpp#L218)
   - [x] [Hessian LDLT decomposition](https://github.com/savant117/avbd-demo2d/blob/main/source/maths.h)
-  - [x] [SPD hessian approximation (section 3.5)](https://graphics.cs.utah.edu/research/projects/avbd/Augmented_VBD-SIGGRAPH25.pdf)
+  - [x] [SPD hessian approximation](https://github.com/savant117/avbd-demo2d/blob/main/source/maths.h#L325) (section 3.5)
 
 ### From [Vellum (XPBD)](https://www.sidefx.com/docs/houdini/vellum/overview.html)
   - [x] Vellum integration (1st order, 2nd order)
