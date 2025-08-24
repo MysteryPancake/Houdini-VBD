@@ -50,7 +50,7 @@ Thanks to Anka He Chen and Chris Giles for making these open source with permiss
   - [x] [Hessian LDLT decomposition](https://github.com/savant117/avbd-demo2d/blob/main/source/maths.h)
   - [x] [SPD hessian approximation (section 3.5)](https://graphics.cs.utah.edu/research/projects/avbd/Augmented_VBD-SIGGRAPH25.pdf)
 
-### From [Vellum](https://www.sidefx.com/docs/houdini/vellum/overview.html)
+### From [Vellum (XPBD)](https://www.sidefx.com/docs/houdini/vellum/overview.html)
   - [x] Vellum integration (1st order, 2nd order)
   - [x] Self and external collisions (very buggy, to be replaced soon)
   - [x] Stopped, permanent and animated pin support
@@ -135,15 +135,15 @@ I think this is cheating and goes against the design of VBD, but I'll eventually
 
 AVBD also includes a SPD hessian approximation which greatly improves stability, used on all constraints by default. However it causes instability for neo-hookean constraints, so it's optional for them.
 
-## Is VBD faster than Vellum?
+## Is VBD faster than Vellum (XPBD)?
 
-Despite the hype, sadly not. It's near impossible for VBD to be faster than Vellum.
+Despite the hype, sadly not. It's near impossible for VBD to be faster than XPBD.
 
 On paper VBD is faster because it runs over points, which have less graph colors than prims. Graph colors control the number of workgroups, meaning how many points can be processed at the same time.
 
 <img src="./images/vellum_vs_vbd.png" height="500">
 
-While it's true points have less graph colors, for all constraints in VBD each point loops over its connections to compute their energy contributions. This adds tons of extra operations, often 2x more than Vellum!
+While it's true points have less graph colors, for all constraints in VBD each point loops over its connections to compute their energy contributions. This adds tons of extra operations, often 2x more than XPBD!
 
 <img src="./images/vellum_vs_vbd2.png" height="500">
 
