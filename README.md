@@ -65,6 +65,7 @@ Thanks to Anka He Chen and Chris Giles for making these open source with permiss
   - [ ] External collisions
 - [ ] Steal from [AVBD](https://graphics.cs.utah.edu/research/projects/avbd/)
   - [ ] [Motor constraints](https://github.com/savant117/avbd-demo2d/blob/main/source/motor.cpp)
+  - [ ] Sticking contacts
   - [ ] Rigid body support
   - [ ] Hard constraints for collisions
   - [ ] Update all existing constraints to AVBD
