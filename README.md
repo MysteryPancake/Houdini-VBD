@@ -43,8 +43,8 @@ Thanks to Anka He Chen and Chris Giles for making these open source with permiss
   - [x] Ground damping
 
 ### From [AVBD-2D](https://github.com/savant117/avbd-demo2d)
-  - [x] [Spring constraints](https://github.com/savant117/avbd-demo2d/blob/main/source/spring.cpp) (currently not including rigid rotation)
-  - [x] [Joint constraints](https://github.com/savant117/avbd-demo2d/blob/main/source/joint.cpp) (currently not including rigid rotation)
+  - [x] [Spring constraints](https://github.com/savant117/avbd-demo2d/blob/main/source/spring.cpp) (currently missing rigid rotation)
+  - [x] [Joint constraints](https://github.com/savant117/avbd-demo2d/blob/main/source/joint.cpp) (currently missing rigid rotation)
   - [x] Dual constraint updates
   - [x] Breaking constraints
   - [x] [Hessian LDLT decomposition](https://github.com/savant117/avbd-demo2d/blob/main/source/maths.h)
@@ -66,7 +66,7 @@ Thanks to Anka He Chen and Chris Giles for making these open source with permiss
 - [ ] Steal from [AVBD](https://graphics.cs.utah.edu/research/projects/avbd/)
   - [ ] [Motor constraints](https://github.com/savant117/avbd-demo2d/blob/main/source/motor.cpp)
   - [ ] Sticking contacts
-  - [ ] Rigid body support
+  - [ ] Rigid body support (packed prims)
   - [ ] Hard constraints for collisions
   - [ ] Update all existing constraints to AVBD
 - [ ] Steal from myself
