@@ -280,9 +280,9 @@ static void accumulateMaterialForceAndHessian_SpringAVBD(
 
     // This hessian isn't rotated like in avbd-2d, because @orient isn't supported yet
     mat3 H = {
-        ((fpreal3)(1.0f, 0.0f, 0.0f) - (n * n.x) / dlen2) / dlen,
-        ((fpreal3)(0.0f, 1.0f, 0.0f) - (n * n.y) / dlen2) / dlen,
-        ((fpreal3)(0.0f, 0.0f, 1.0f) - (n * n.z) / dlen2) / dlen
+        ((fpreal3)(1.0f, 0.0f, 0.0f) - (n * n.x)) / dlen,
+        ((fpreal3)(0.0f, 1.0f, 0.0f) - (n * n.y)) / dlen,
+        ((fpreal3)(0.0f, 0.0f, 1.0f) - (n * n.z)) / dlen
     };
     // AVBD also uses a jacobian (1st derivative)
     // VBD constraints should probably be updated to use a jacobian too
