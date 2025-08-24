@@ -28,13 +28,13 @@ Thanks to Anka He Chen and Chris Giles for making these open source with permiss
 ## Features
 
 ### From [TinyVBD](https://github.com/AnkaChan/TinyVBD)
-  - [x] [Mass-Spring constraints](https://github.com/AnkaChan/TinyVBD/blob/main/main.cpp#L381) (for strings)
+  - [x] [Mass-spring constraints](https://github.com/AnkaChan/TinyVBD/blob/main/main.cpp#L381) (for strings)
   - [x] [Accelerated convergence method (section 3.8)](https://graphics.cs.utah.edu/research/projects/vbd/vbd-siggraph2024.pdf)
   - [x] Hessian direct inverse
 
 ### From [Gaia](https://github.com/AnkaChan/Gaia)
   - [x] VBD integration (inertia, inertia and acceleration, adaptive)
-  - [x] [Neo-Hookean constraints](https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_NeoHookean.cpp) (for tetrahedrons)
+  - [x] [Neo-hookean constraints](https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_NeoHookean.cpp) (for tetrahedrons)
   - [x] General damping
 
 ### From [NVIDIA Warp](https://github.com/NVIDIA/warp/blob/main/warp/sim/integrator_vbd.py)
