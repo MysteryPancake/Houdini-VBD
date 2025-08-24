@@ -272,6 +272,8 @@ static void accumulateMaterialForceAndHessian_SpringAVBD(
     // Compute constraint and derivatives
     const fpreal3 d = p0 - p1;
     const fpreal dlen2 = dot(d, d);
+    if (dlen2 == 0.0f) return;
+    
     const fpreal dlen = sqrt(dlen2);
     const fpreal C = dlen - restlength;
     const fpreal3 n = d / dlen;
@@ -418,6 +420,8 @@ static void accumulateMaterialForceAndHessian_MassSpring(
 
     const fpreal3 d = p0 - p1;
     const fpreal dlen2 = dot(d, d);
+    if (dlen2 == 0.0f) return;
+    
     const fpreal dlen = sqrt(dlen2);
     const fpreal l_ratio = restlength / dlen;
     
