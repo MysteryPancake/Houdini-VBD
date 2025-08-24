@@ -185,7 +185,7 @@ if (abs(determinant(hessian)) > 1e-7) { // if |det(H𝑖)| > 𝜖 for some small
 
 This helps, but it also explodes when the values gets too large (for example with very stiff constraints).
 
-AVBD uses an approximation to make the hessian positive semi-definite. This massively improves stability so it's used on all constraint types by default, except neo-hookean which is optional. Neo-hookean often fully degenerates when it's enabled.
+The [AVBD paper](https://graphics.cs.utah.edu/research/projects/avbd/Augmented_VBD-SIGGRAPH25.pdf) uses an approximation to make the hessian positive semi-definite. This massively improves stability so it's used on all constraint types by default, except neo-hookean which is optional. Neo-hookean often fully degenerates when it's enabled.
 
 ## AVBD Q&A
 
