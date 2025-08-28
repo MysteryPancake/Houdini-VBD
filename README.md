@@ -129,8 +129,8 @@ Here's a comparison between Vellum and VBD:
 | **Collisions** | Detangle based | IPC based | Very accurate (not implemented yet though) | Slower to compute |
 
 The most important part of VBD is the energy definition, which depends on the constraint type. Here's a few:
-- Mass-spring (in [TinyVBD](https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_MassSpring.cpp) but [removed from Gaia](https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_MassSpring.cpp))
-- StVK (in [NVIDIA Warp](https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_MassSpring.cpp))
+- Mass-spring (in [TinyVBD](https://github.com/AnkaChan/TinyVBD) but [removed from Gaia](https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_MassSpring.cpp))
+- StVK (in [NVIDIA Warp](https://github.com/NVIDIA/warp/blob/main/warp/sim/integrator_vbd.py#L220))
 - Neo-hookean (in [Gaia](https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_NeoHookean.cpp))
 - Spring (in [AVBD](https://github.com/savant117/avbd-demo2d/blob/main/source/spring.cpp), mass-spring but with a different formula)
 - Joint (in [AVBD](https://github.com/savant117/avbd-demo2d/blob/main/source/joint.cpp))
