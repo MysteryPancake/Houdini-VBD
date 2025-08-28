@@ -50,8 +50,8 @@ Thanks to Anka He Chen and Chris Giles for making these open source with permiss
   - [x] [Joint constraints](https://github.com/savant117/avbd-demo2d/blob/main/source/joint.cpp) (currently missing rigid rotation)
   - [x] [Dual constraint updates](https://github.com/savant117/avbd-demo2d/blob/main/source/solver.cpp#L205)
   - [x] [Breaking constraints](https://github.com/savant117/avbd-demo2d/blob/main/source/solver.cpp#L218)
-  - [x] [Hessian LDLT decomposition](https://github.com/savant117/avbd-demo2d/blob/main/source/maths.h)
-  - [x] [SPD hessian approximation](https://github.com/savant117/avbd-demo2d/blob/main/source/maths.h#L325) (section 3.5)
+  - [x] [Hessian LDLT decomposition](https://github.com/savant117/avbd-demo2d/blob/main/source/maths.h#L325)
+  - [x] [SPD hessian approximation](https://github.com/savant117/avbd-demo2d/blob/main/source/solver.cpp#L188) (section 3.5)
 
 ### From [Vellum (XPBD)](https://www.sidefx.com/docs/houdini/vellum/overview.html)
   - [x] Vellum integration (1st order, 2nd order)
