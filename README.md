@@ -142,15 +142,17 @@ I've implemented most of these as different constraint types, so you can connect
 
 AVBD is an extension to VBD mainly to improve stiffness. It changes stiffness adaptively to prevent stuff getting too loose. Stiffness is stored on the prims, so both the points (primal elements) and prims (dual elements) must be updated.
 
-As you might expect, looping over both the points and the prims makes the solver 2x slower. Luckily I found it gives near identical results to move the dual solve logic into the point update, so the performance stays the same. It even works better since many points belong to each prim, so 10 connected points means 10x more updates to that prim.
+As you might expect, looping over both points and prims is around 2x slower. Luckily I found it gives near identical results to move the dual solve logic into the point update, so the performance stays the same. It even works better since many points belong to each prim, so 10 connected points means 10x more updates to that prim.
 
 Adaptive stiffness currently only affects AVBD constraints. Eventually I'll rewrite the other VBD constraints to use it too.
 
 AVBD also includes rigid bodies in a hacky way. Instead of solving each point of the rigid body, they represent the entire body as one point (like a packed prim). This means each point can have a rigid rotation, included in the hessian for better results.
 
-This is misleading, it gives a false impression of stiffness and goes against the design of VBD, but I'll eventually include packed prims and their rotations in the hessians. For now AVBD constraints solve translation but not rigid rotation.
+I think this is misleading, it gives a false impression of stiffness and goes against the design of VBD, but I'll eventually include packed prims and their rotations in the hessians. For now AVBD constraints solve translation but not rigid rotation.
 
 AVBD also includes a SPD hessian approximation which greatly improves stability, used on all constraints by default. However it causes instability for neo-hookean constraints, so it's optional for them.
+
+Personally I think dual updates could help, but not in the form implemented by AVBD. Vellum (XPBD) already uses dual updates for everything, with much greater success since it updates both sides of the constraint at a time (see [stiffness limits](#why-does-stiffness-have-a-limit)). Even though stiffness gets affected by dual updates in AVBD, it only gets applied in primal updates. In other words, AVBD runs 2x slower than VBD without the benefits of dual updating you'd expect from XPBD.
 
 ## Is VBD faster than Vellum (XPBD)?
 
