@@ -4,6 +4,9 @@
 <img src="./images/demo2.webp" width="45%"></img>
 <img src="./images/avbd_dual.webp" width="45%"></img>
 <img src="./images/breaking.webp" width="45%"></img>
+<a href="https://youtu.be/VbLSCm5xQ4o">
+  <img src="https://img.youtube.com/vi/VbLSCm5xQ4o/mqdefault.jpg" width="45%">
+</a>
 
 WIP of Vertex Block Descent (VBD) in Houdini. It runs natively without plugins, as god intended.
 
@@ -18,7 +21,7 @@ Thanks to Anka He Chen and Chris Giles for making these open source with permiss
 | [Download the HIP file!](../../releases/latest) |
 | --- |
 
-> [!WARNING]
+> [!CAUTION]
 > Self and external collisions are not implemented correctly yet, and are [very buggy](#why-are-collisions-so-bad).
 >
 > Ground collisions are correct to VBD, but need to be updated to use hard constraints from AVBD.
@@ -74,6 +77,18 @@ Thanks to Anka He Chen and Chris Giles for making these open source with permiss
   - [ ] Make neighbours loop parallel
   - [ ] Stop everything exploding all the time
 - [ ] Touch grass
+
+## BREAKING NEWS: Otis Solver!
+
+You heard it here first! The [new Otis solver](https://www.sidefx.com/docs/houdini/nodes/sop/otissolver.html) in Houdini 21 also uses Vertex Block Descent!
+
+In the spirit of this project (and not getting sued) I won't steal anything from it for now.
+
+Funnily enough, most of their code is identical to mine! They even use a 9x9 matrix for tets! SideFX if you're reading this, check my version history :)
+
+SideFX made some nice improvements for stability, including a new method for approximating the hessian. They also run it in chunks of 16 for some reason.
+
+They even added correct collision handling based on how VBD did it! Hopefully I still have time to update to AVBD collisions before they do.
 
 ## What's Vertex Block Descent?
 
