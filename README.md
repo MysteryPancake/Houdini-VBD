@@ -71,6 +71,7 @@ Thanks to Anka He Chen and Chris Giles for making these open source with permiss
   - [ ] Update all existing constraints to AVBD
 - [ ] Steal from myself
   - [ ] SDF collisions
+  - [ ] Make neighbours loop parallel
 - [ ] Touch grass
 
 ## What's Vertex Block Descent?
