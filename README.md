@@ -74,6 +74,7 @@ Thanks to Anka He Chen and Chris Giles for making these open source with permiss
   - [ ] Update all existing constraints to AVBD
 - [ ] Steal from myself
   - [ ] SDF collisions
+  - [ ] Add bounce for collisions
   - [ ] Make neighbours loop parallel
   - [ ] Stop everything exploding all the time
 - [ ] Touch grass
