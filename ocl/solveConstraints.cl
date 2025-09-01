@@ -858,12 +858,12 @@ static void accumulateBoundaryForceAndHessian(
     accumulateVertexFriction(friction, ground_force_norm, T, u, epsU * timeinc, force, hessian);
 }
 
-// Workgroups are computed for points in graph_color, since we're using Vertex Block Descent
-// See pbd_constraints.cl for another example of this, note it runs on prims instead
-// For Vellum compatibility, you need separate workgroups for points (VBD) and prims (XPBD)
+// Worksets are computed in graph_color for points, as required for Vertex Block Descent
+// See pbd_constraints.cl for another example, note it runs on prims instead
+// For Vellum compatibility, you need two separate worksets (one for points, one for prims)
 
-// Coloring is based on ConstraintGeometry, because ConstraintGeometry can have many more connections than Geometry
-// This ensures the coloring respects all connections properly, for the best possible stability
+// Coloring is based on ConstraintGeometry, since ConstraintGeometry has many more connections
+// This ensures coloring respects all connections for the best possible stability
 kernel void solveConstraints(
     int color_offset,
     int color_length,
@@ -991,7 +991,7 @@ kernel void solveConstraints(
     }
     
     // Accumulate energy for each constraint connected to the current point
-    // This should really be run in parallel (thread level) to match the paper
+    // I tried hard to get this to run in parallel, but the performance was always worse :(
     const int num_constraints = entriesAt(_bound_pointprims, coloredidx);
     for (int constraint_id = 0; constraint_id < num_constraints; ++constraint_id)
     {
