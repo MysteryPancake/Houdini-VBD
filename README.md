@@ -144,7 +144,7 @@ I've implemented most of these as different constraint types, so you can connect
 
 AVBD is an extension to VBD mainly to improve stiffness. It adds hard constraints, which is just an extension to regular constraints meaning the stiffness gets changed adaptively.
 
-Stiffness is stored on the prims, so both the points (primal elements) and prims (dual elements) must be updated. As you might expect, looping over both points and prims is around 2x slower. I tried merging the logic but it causes hard constraints to explode.
+Stiffness is stored on the prims, so both the points (primal elements) and prims (dual elements) must be updated. As you might expect, looping over both points and prims is around 2x slower. Luckily I found you can merge the dual solve logic by tracking how many points are updated. Once the last point is updated, it's safe to dual solve the prims.
 
 Adaptive stiffness currently only affects AVBD constraints. Eventually I'll rewrite the other VBD constraints to use it too.
 
