@@ -142,9 +142,9 @@ I've implemented most of these as different constraint types, so you can connect
 
 ## What's Augmented Vertex Block Descent?
 
-AVBD is an extension to VBD mainly to improve stiffness. It changes stiffness adaptively to prevent stuff getting too loose. Stiffness is stored on the prims, so both the points (primal elements) and prims (dual elements) must be updated.
+AVBD is an extension to VBD mainly to improve stiffness. It adds hard constraints, which is just an extension to regular constraints meaning the stiffness gets changed adaptively.
 
-As you might expect, looping over both points and prims is around 2x slower. Luckily I found it gives near identical results to move the dual solve logic into the point update, so the performance stays the same. It even works better since many points belong to each prim, so 10 connected points means 10x more updates to that prim.
+Stiffness is stored on the prims, so both the points (primal elements) and prims (dual elements) must be updated. As you might expect, looping over both points and prims is around 2x slower. I tried merging the logic but it causes hard constraints to explode.
 
 Adaptive stiffness currently only affects AVBD constraints. Eventually I'll rewrite the other VBD constraints to use it too.
 
