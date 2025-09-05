@@ -13,6 +13,13 @@
 #define entriesAt(_arr_, _idx_) ((_idx_ >= 0 && _idx_ < _arr_##_length) ? (_arr_##_index[_idx_+1] - _arr_##_index[_idx_]) : 0)
 #define compAt(_arr_, _idx_, _compidx_) ((_idx_ >= 0 && _idx_ < _arr_##_length && _compidx_ >= 0 && _compidx_ < entriesAt_unsafe(_arr_, _idx_)) ? _arr_[_arr_##_index[_idx_] + _compidx_] : 0)
 
+// Macro to load the attributes commonly used by AVBD
+#define LOAD_AVBD_ATTRIBS(prim_id) \
+    const fpreal3 lambda  = vload3(prim_id, _bound_lambda); \
+    const fpreal3 penalty = vload3(prim_id, _bound_penalty); \
+    const fpreal3 fmin    = vload3(prim_id, _bound_fmin); \
+    const fpreal3 fmax    = vload3(prim_id, _bound_fmax);
+
 // Rough approximation to match Vellum
 const fpreal STIFFNESS_SCALE = 10.0f;
 const fpreal DAMPING_SCALE = 0.001f;
@@ -108,7 +115,7 @@ static int solveDirect(
     const fpreal det = dot(s0, adj0);
     if (fabs(det) < epsilon * (fabs(s0.x * adj0.x) + fabs(s1.x * adj0.y) + fabs(s2.x * adj0.z))) return 0;
 
-    (*out) = (fpreal3)(dot(adj0, force), dot(adj1, force), dot(adj2, force)) / det;
+    *out = (fpreal3)(dot(adj0, force), dot(adj1, force), dot(adj2, force)) / det;
     return 1;
 }
 
@@ -141,7 +148,7 @@ static void accumulateInertiaForceAndHessian(
     const fpreal timeinc)
 {
     const fpreal scale = mass / (timeinc * timeinc);
-    (*force) += (inertia - P) * scale;
+    *force += (inertia - P) * scale;
     _mat3adddiag(hessian, hessian, scale);
 }
 
@@ -230,8 +237,40 @@ static void accumulateAVBD_Spring(
     mat3add(H, G, H);
 
     // Accumulate force (Eq. 13) and hessian (Eq. 17)
-    (*force) -= J * f;
+    *force -= J * f;
     mat3add(hessian, H, hessian);
+}
+
+// From https://github.com/savant117/avbd-demo2d/blob/main/source/spring.cpp#L22
+static int computeConstraint_SpringAVBD(
+    int *pt0,
+    fpreal3 *d,
+    fpreal *dlen,
+    fpreal *C,
+    const int prim_id,
+    global int *_bound_primpoints,
+    global int *_bound_primpoints_index,
+    const int _bound_primpoints_length,
+    global fpreal *_bound_P,
+    global fpreal *_bound_restlength)
+{
+    *pt0 = compAt(_bound_primpoints, prim_id, 0);
+    const int pt1 = compAt(_bound_primpoints, prim_id, 1);
+
+    const fpreal3 p0 = vload3(*pt0, _bound_P);
+    const fpreal3 p1 = vload3(pt1, _bound_P);
+    
+    const fpreal restlength = _bound_restlength[prim_id];
+
+    // Compute constraint and derivatives
+    *d = p0 - p1;
+    const fpreal dlen2 = dot(*d, *d);
+    if (dlen2 == 0.0f) return 0;
+    
+    *dlen = sqrt(dlen2);
+    *C = *dlen - restlength;
+
+    return 1;
 }
 
 // Energy for spring constraints from AVBD
@@ -250,32 +289,15 @@ static void accumulateMaterialForceAndHessian_SpringAVBD(
     global fpreal *_bound_lambda,
     global fpreal *_bound_penalty,
     global fpreal *_bound_fmin,
-    global fpreal *_bound_fmax,
-    global int *_bound_broken,
-    global fpreal *_bound_breakthreshold,
-    const fpreal beta,
-    const fpreal PENALTY_MAX)
+    global fpreal *_bound_fmax)
 {
-    const int pt0 = compAt(_bound_primpoints, prim_id, 0);
-    const int pt1 = compAt(_bound_primpoints, prim_id, 1);
-
-    const fpreal3 p0 = vload3(pt0, _bound_P);
-    const fpreal3 p1 = vload3(pt1, _bound_P);
+    int pt0;
+    fpreal3 d;
+    fpreal dlen, C;
+    if (!computeConstraint_SpringAVBD(&pt0, &d, &dlen, &C,
+        prim_id, _bound_primpoints, _bound_primpoints_index, _bound_primpoints_length,
+        _bound_P, _bound_restlength)) return;
     
-    const fpreal restlength = _bound_restlength[prim_id];
-    const fpreal stiffness = _bound_stiffness[prim_id] * STIFFNESS_SCALE;
-    const fpreal3 lambda = vload3(prim_id, _bound_lambda);
-    const fpreal3 penalty = vload3(prim_id, _bound_penalty);
-    const fpreal3 fmin = vload3(prim_id, _bound_fmin);
-    const fpreal3 fmax = vload3(prim_id, _bound_fmax);
-
-    // Compute constraint and derivatives
-    const fpreal3 d = p0 - p1;
-    const fpreal dlen2 = dot(d, d);
-    if (dlen2 == 0.0f) return;
-    
-    const fpreal dlen = sqrt(dlen2);
-    const fpreal C = dlen - restlength;
     const fpreal3 n = d / dlen;
 
     // This hessian isn't rotated like in avbd-2d, because @orient isn't supported yet
@@ -288,11 +310,39 @@ static void accumulateMaterialForceAndHessian_SpringAVBD(
     // VBD constraints should probably be updated to use a jacobian too
     const fpreal3 J = pt0 == idx ? n : -n;
     
-    accumulateAVBD_Spring(force, hessian, J, H, C, stiffness, lambda.x, penalty.x, fmin.x, fmax.x);
+    const fpreal stiffness = _bound_stiffness[prim_id] * STIFFNESS_SCALE;
+    LOAD_AVBD_ATTRIBS(prim_id);
     
-    // Dual update to improve stiffness
-    // It's around 2x faster to run it here than in a separate prim kernel
-    // C is less accurate, but in my tests it makes very little difference
+    accumulateAVBD_Spring(force, hessian, J, H, C, stiffness, lambda.x, penalty.x, fmin.x, fmax.x);
+}
+
+static void dualUpdate_SpringAVBD(
+    const int prim_id,
+    global int *_bound_primpoints,
+    global int *_bound_primpoints_index,
+    const int _bound_primpoints_length,
+    global fpreal *_bound_P,
+    global fpreal* _bound_stiffness,
+    global fpreal *_bound_restlength,
+    global fpreal *_bound_lambda,
+    global fpreal *_bound_penalty,
+    global fpreal *_bound_fmin,
+    global fpreal *_bound_fmax,
+    global int *_bound_broken,
+    global fpreal *_bound_breakthreshold,
+    const fpreal beta,
+    const fpreal PENALTY_MAX)
+{
+    int pt0;
+    fpreal3 d;
+    fpreal dlen, C;
+    if (!computeConstraint_SpringAVBD(&pt0, &d, &dlen, &C,
+        prim_id, _bound_primpoints, _bound_primpoints_index, _bound_primpoints_length,
+        _bound_P, _bound_restlength)) return;
+    
+    const fpreal stiffness = _bound_stiffness[prim_id] * STIFFNESS_SCALE;
+    LOAD_AVBD_ATTRIBS(prim_id);
+
     dualUpdateAVBD(_bound_lambda, _bound_penalty, _bound_broken, _bound_breakthreshold, 1,
         prim_id, stiffness, lambda, penalty, C, fmin, fmax, beta, PENALTY_MAX);
 }
@@ -323,8 +373,43 @@ static void accumulateAVBD_Joint(
         outerprod3(J[i], J[i] * penalty[i], H);
 
         // Accumulate force (Eq. 13) and hessian (Eq. 17)
-        (*force) -= J[i] * f;
+        *force -= J[i] * f;
         mat3add(hessian, H, hessian);
+    }
+}
+
+// From https://github.com/savant117/avbd-demo2d/blob/main/source/joint.cpp#L36
+static void computeConstraint_JointAVBD(
+    int *pt0,
+    fpreal3 *C,
+    fpreal *stiffness,
+    const int prim_id,
+    global int *_bound_primpoints,
+    global int *_bound_primpoints_index,
+    const int _bound_primpoints_length,
+    global fpreal *_bound_P,
+    global fpreal *_bound_C,
+    global fpreal *_bound_stiffness,
+    const fpreal alpha)
+{
+    *pt0 = compAt(_bound_primpoints, prim_id, 0);
+    const int pt1 = compAt(_bound_primpoints, prim_id, 1);
+
+    const fpreal3 p0 = vload3(*pt0, _bound_P);
+    const fpreal3 p1 = vload3(pt1, _bound_P);
+    
+    // C0 is the difference in position (p0 - p1), computed during the dual update
+    const fpreal3 C0 = vload3(prim_id, _bound_C);
+    
+    // Compute constraint and derivatives
+    *C = p0 - p1;
+    
+    // Store stabilized constraint function, if a hard constraint (Eq. 18)
+    // Note stiffness is 3D for each dimension in avbd-2d, here it's 1D
+    *stiffness = _bound_stiffness[prim_id] * STIFFNESS_SCALE;
+    if (isinf(*stiffness))
+    {
+        *C -= C0 * alpha;
     }
 }
 
@@ -344,35 +429,14 @@ static void accumulateMaterialForceAndHessian_JointAVBD(
     global fpreal *_bound_penalty,
     global fpreal *_bound_fmin,
     global fpreal *_bound_fmax,
-    global int *_bound_broken,
-    global fpreal *_bound_breakthreshold,
-    const fpreal alpha,
-    const fpreal beta,
-    const fpreal PENALTY_MAX)
+    const fpreal alpha)
 {
-    const int pt0 = compAt(_bound_primpoints, prim_id, 0);
-    const int pt1 = compAt(_bound_primpoints, prim_id, 1);
-
-    const fpreal3 p0 = vload3(pt0, _bound_P);
-    const fpreal3 p1 = vload3(pt1, _bound_P);
-    
-    // C0 is the difference in position (p0 - p1), computed during the dual update
-    const fpreal3 C0 = vload3(prim_id, _bound_C);
-    const fpreal stiffness = _bound_stiffness[prim_id] * STIFFNESS_SCALE;
-    const fpreal3 lambda = vload3(prim_id, _bound_lambda);
-    const fpreal3 penalty = vload3(prim_id, _bound_penalty);
-    const fpreal3 fmin = vload3(prim_id, _bound_fmin);
-    const fpreal3 fmax = vload3(prim_id, _bound_fmax);
-    
-    // Compute constraint and derivatives
-    fpreal3 C = p0 - p1;
-    
-    // Note stiffness is 3D for each dimension in avbd-2d, here it's 1D
-    if (isinf(stiffness))
-    {
-        // Store stabilized constraint function, if a hard constraint (Eq. 18)
-        C -= C0 * alpha;
-    }
+    int pt0;
+    fpreal3 C;
+    fpreal stiffness;
+    computeConstraint_JointAVBD(&pt0, &C, &stiffness,
+        prim_id, _bound_primpoints, _bound_primpoints_index, _bound_primpoints_length,
+        _bound_P, _bound_C, _bound_stiffness, alpha);
     
     // Joints only use a jacobian (1st derivative)
     // This isn't rotated like in avbd-2d, because @orient isn't supported yet
@@ -383,11 +447,37 @@ static void accumulateMaterialForceAndHessian_JointAVBD(
         mat3scale(J, J, -1);
     }
     
+    LOAD_AVBD_ATTRIBS(prim_id);
     accumulateAVBD_Joint(force, hessian, J, C, stiffness, lambda, penalty, fmin, fmax);
+}
+
+static void dualUpdate_JointAVBD(
+    const int prim_id,
+    global int *_bound_primpoints,
+    global int *_bound_primpoints_index,
+    const int _bound_primpoints_length,
+    global fpreal *_bound_P,
+    global fpreal* _bound_stiffness,
+    global fpreal *_bound_C,
+    global fpreal *_bound_lambda,
+    global fpreal *_bound_penalty,
+    global fpreal *_bound_fmin,
+    global fpreal *_bound_fmax,
+    global int *_bound_broken,
+    global fpreal *_bound_breakthreshold,
+    const fpreal alpha,
+    const fpreal beta,
+    const fpreal PENALTY_MAX)
+{
+    int pt0;
+    fpreal3 C;
+    fpreal stiffness;
+    computeConstraint_JointAVBD(&pt0, &C, &stiffness,
+        prim_id, _bound_primpoints, _bound_primpoints_index, _bound_primpoints_length,
+        _bound_P, _bound_C, _bound_stiffness, alpha);
     
-    // Dual update to improve stiffness
-    // It's around 2x faster to run it here than in a separate prim kernel
-    // C is less accurate, but in my tests it makes very little difference
+    LOAD_AVBD_ATTRIBS(prim_id);
+    
     dualUpdateAVBD(_bound_lambda, _bound_penalty, _bound_broken, _bound_breakthreshold, 3,
         prim_id, stiffness, lambda, penalty, C, fmin, fmax, beta, PENALTY_MAX);
 }
@@ -442,7 +532,7 @@ static void accumulateMaterialForceAndHessian_MassSpring(
     
     // Mass-spring force gradient from TinyVBD
     const fpreal stretch = (dlen - restlength) / dlen;
-    (*force) -= stiffness * stretch * d * (pt0 == idx ? 1 : -1);
+    *force -= stiffness * stretch * d * (pt0 == idx ? 1 : -1);
     
     // Remove the constraint if it exceeds the fracture threshold
     const fpreal breakthreshold = _bound_breakthreshold[prim_id];
@@ -752,7 +842,7 @@ static void accumulateMaterialForceAndHessian_NeoHookean(
         _mat3adddiag(dampingH, dampingH, tmp);
         mat3scale(dampingH, dampingH, 1.0f / timeinc);
 
-        (*force) -= mat3vecmul(dampingH, displacement);
+        *force -= mat3vecmul(dampingH, displacement);
         mat3add(d2E_dxi_dxi, dampingH, d2E_dxi_dxi);
     }
     
@@ -773,7 +863,7 @@ static void accumulateDampingForceAndHessian(
     mat3 damping_hessian;
     mat3scale(damping_hessian, K, gamma / timeinc);
     
-    (*force) += damping_force;
+    *force += damping_force;
     mat3add(hessian, damping_hessian, hessian);
 }
 
@@ -795,7 +885,7 @@ static void accumulateVertexFriction(
     // IPC friction
     const fpreal f1_SF_over_x = uNorm > epsU ? 1.0f / uNorm : (-uNorm / epsU + 2.0f) / epsU;
     const fpreal mu_lambda_eps = mu * lambda * f1_SF_over_x;
-    (*force) -= mu_lambda_eps * _mat32vecmul(T, u);
+    *force -= mu_lambda_eps * _mat32vecmul(T, u);
     
     // Compute T * (f1_SF_over_x * mat2ident()) * transpose(T)
     // This results in some nice cancellations
@@ -833,7 +923,7 @@ static void accumulateBoundaryForceAndHessian(
     // Collisions can be overpowered by stiff constraints, causing penetration
     // This should be improved by hard constraints from AVBD
     const fpreal ground_force_norm = penetration_depth * stiffness;
-    (*force) += ground_normal * ground_force_norm;
+    *force += ground_normal * ground_force_norm;
     
     mat3 ground_hessian;
     outerprod3(ground_normal, ground_normal, ground_hessian);
@@ -844,7 +934,7 @@ static void accumulateBoundaryForceAndHessian(
     {
         mat3 damping_hessian;
         mat3scale(damping_hessian, ground_hessian, damping / timeinc);
-        (*force) -= mat3vecmul(damping_hessian, displacement);
+        *force -= mat3vecmul(damping_hessian, displacement);
         mat3sub(ground_hessian, damping_hessian, ground_hessian);
     }
     
@@ -947,7 +1037,9 @@ kernel void solveConstraints(
     const fpreal beta,
     const fpreal PENALTY_MAX,
     int _bound_C_length,
-    global fpreal * restrict _bound_C
+    global fpreal * restrict _bound_C,
+    int _bound_pointsupdated_length,
+    global int * restrict _bound_pointsupdated
 )
 {
     // Like Vellum, everything here is based on timeinc
@@ -1012,7 +1104,9 @@ kernel void solveConstraints(
                 accumulateMaterialForceAndHessian_SpringAVBD(&force, hessian, idx, prim_id,
                     _bound_primpoints, _bound_primpoints_index, _bound_primpoints_length,
                     _bound_P, _bound_stiffness, _bound_restlength, _bound_lambda, _bound_penalty,
-                    _bound_fmin, _bound_fmax, _bound_broken, _bound_breakthreshold, beta, PENALTY_MAX);
+                    _bound_fmin, _bound_fmax);
+                // Dual solving is allowed once we've updated all points for this prim
+                atomic_add(&_bound_pointsupdated[prim_id], 1);
                 break;
             }
             case AVBD_JOINT:
@@ -1020,7 +1114,9 @@ kernel void solveConstraints(
                 accumulateMaterialForceAndHessian_JointAVBD(&force, hessian, idx, prim_id,
                     _bound_primpoints, _bound_primpoints_index, _bound_primpoints_length,
                     _bound_P, _bound_stiffness, _bound_C, _bound_lambda, _bound_penalty, _bound_fmin,
-                    _bound_fmax, _bound_broken, _bound_breakthreshold, alpha, beta, PENALTY_MAX);
+                    _bound_fmax, alpha);
+                // Dual solving is allowed once we've updated all points for this prim
+                atomic_add(&_bound_pointsupdated[prim_id], 1);
                 break;
             }
 #if defined(HAS_restmatrix) && defined(HAS_bendstiffness) && defined(HAS_dampingratio) && defined(HAS_benddampingratio)
@@ -1073,6 +1169,35 @@ kernel void solveConstraints(
         {
             P += solveLDLT(force, hessian) * convergence; // Requires the hessian to be SPD
             vstore3(P, idx, _bound_P);
+        }
+    }
+    
+    // Dual update for AVBD, it's 2x faster to run it here than in a separate prim kernel
+    for (int constraint_id = 0; constraint_id < num_constraints; ++constraint_id)
+    {
+        const int prim_id = compAt(_bound_pointprims, coloredidx, constraint_id);
+        
+        // Dual solve is only correct once all points of the constraint are updated
+        const int points_updated = _bound_pointsupdated[prim_id];
+        if (points_updated != num_constraints) continue;
+        
+        const int constraint_type = _bound_type[prim_id];
+        switch (constraint_type)
+        {
+            case AVBD_SPRING:
+            {
+                dualUpdate_SpringAVBD(prim_id, _bound_primpoints, _bound_primpoints_index, _bound_primpoints_length,
+                    _bound_P, _bound_stiffness, _bound_restlength, _bound_lambda, _bound_penalty,
+                    _bound_fmin, _bound_fmax, _bound_broken, _bound_breakthreshold, beta, PENALTY_MAX);
+                break;
+            }
+            case AVBD_JOINT:
+            {
+                dualUpdate_JointAVBD(prim_id, _bound_primpoints, _bound_primpoints_index, _bound_primpoints_length,
+                    _bound_P, _bound_stiffness, _bound_C, _bound_lambda, _bound_penalty,
+                    _bound_fmin, _bound_fmax, _bound_broken, _bound_breakthreshold, alpha, beta, PENALTY_MAX);
+                break;
+            }
         }
     }
 

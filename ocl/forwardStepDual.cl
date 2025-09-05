@@ -15,6 +15,7 @@
 #bind prim &penalty fpreal3 geo=ConstraintGeometry
 #bind prim stiffness fpreal geo=ConstraintGeometry
 #bind prim type_hash int geo=ConstraintGeometry
+#bind prim &pointsupdated int geo=ConstraintGeometry
 
 // Rough approximation to match Vellum
 // Shared with solveConstraints.cl
@@ -76,4 +77,8 @@ static void initialize_JointAVBD(
     
     // If it's not a hard constraint, we don't let the penalty exceed the material stiffness
     @penalty.set(min(penalty, @stiffness * STIFFNESS_SCALE));
+    
+    // Dual updating is normally 2x slower when run separately to solveConstraints
+    // Luckily it can be merged into solveConstraints, as long as it happens after the last point update
+    @pointsupdated.set(0);
 }
