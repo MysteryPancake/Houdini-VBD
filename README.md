@@ -84,10 +84,6 @@ Thanks to Anka He Chen and Chris Giles for making these open source with permiss
 
 You heard it here first! The [new Otis solver in Houdini 21](https://www.sidefx.com/docs/houdini/nodes/sop/otissolver.html) uses Vertex Block Descent!
 
-In the spirit of this project (and not getting sued), I won't steal anything from it for now.
-
-Funnily enough, most of their code is identical to mine. They even use a 9x9 matrix for tets! If you're reading this SideFX, check my version history :)
-
 They made some nice improvements for stability, including several new hessian approximations. It also runs in chunks of 16 for some reason. They even added new collision handling based on how VBD did it! It's very tempting to steal, but I'll resist the urge for now.
 
 Currently it's specialized for muscle and tissue, so it might be a while until it gets support for rigid bodies (packed prims). I'm planning to add support for this soon, so we'll see who wins!
