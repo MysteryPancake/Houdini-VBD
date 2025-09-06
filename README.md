@@ -144,7 +144,7 @@ I've implemented most of these as different constraint types, so you can connect
 
 AVBD is an extension to VBD mainly to improve stiffness. It adds hard constraints, which is just an extension to regular constraints meaning the stiffness gets changed adaptively.
 
-Stiffness is stored on the prims, so both the points (primal elements) and prims (dual elements) must be updated. As you might expect, looping over both points and prims is around 2x slower. I tried merging the logic but it causes hard constraints to explode.
+Stiffness is stored on the prims, so both the points (primal elements) and prims (dual elements) must be updated. As you might expect, looping over both points and prims is around 2x slower. Luckily I found you can merge the dual solve logic by tracking how many points are updated. Once the last point is updated, it's safe to dual solve the prims.
 
 Adaptive stiffness currently only affects AVBD constraints. Eventually I'll rewrite the other VBD constraints to use it too.
 
@@ -277,7 +277,9 @@ To me it reads more like a [rigid body solver](https://youtu.be/zpn49cadAnE?si=g
 
 I'm wondering how this applies to a cloth sim for example. Would you create a rigid body for each vertex of the cloth? In this case, what role does the rotation have?
 
-> No response yet :(
+> AVBD and even VBD are not tied to the representation of the degrees of freedom (ie particles, rigid bodies, etc). You can use any representation that you wish. In AVBD we mainly showcased rigid bodies as these were the easiest to show examples of hard constraints. However, you could certainly create hard constraints between particles in AVBD. Also, collisions solved using AVBD are applicable to both particles and rigid bodies. Practically, when solving a particle vertex, you'd be solving a 3x3 system. With rigids, a 6x6 system.
+>
+> For a cloth sim, usually you'd use particles, and each AVBD vertex maps to one vertex of the rendered mesh - no reason to use rigid dofs for this. In general, just use whichever dof representation makes sense for what you are simulating - AVBD / VBD support all of them!
 
 ## How does Vertex Block Descent run?
 
