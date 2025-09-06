@@ -657,7 +657,7 @@ static void accumulateMaterialForceAndHessian_NeoHookean(
     const fpreal scale_k = restVolume * k;
     const fpreal scale_miu = restVolume * miu;
     
-    // 9x9 matrix to store the deformation gradient
+    // Tets need a 9x9 hessian (second derivative of energy w.r.t the deformation gradient)
     // Vellum only uses a few cross products per tet, so this is much slower
     mat9 d2E_dF_dF;
     
@@ -1082,6 +1082,9 @@ kernel void solveConstraints(
         mat3copy(hessian, tmp_hessian);
     }
     
+    // Only use dual solving when AVBD constraints are connected
+    int dual_solve = 0;
+    
     // Accumulate energy for each constraint connected to the current point
     // I tried hard to get this to run in parallel, but the performance was always worse :(
     const int num_constraints = entriesAt(_bound_pointprims, coloredidx);
@@ -1107,6 +1110,7 @@ kernel void solveConstraints(
                     _bound_fmin, _bound_fmax);
                 // Dual solving is allowed once we've updated all points for this prim
                 atomic_add(&_bound_pointsupdated[prim_id], 1);
+                dual_solve = 1;
                 break;
             }
             case AVBD_JOINT:
@@ -1117,6 +1121,7 @@ kernel void solveConstraints(
                     _bound_fmax, alpha);
                 // Dual solving is allowed once we've updated all points for this prim
                 atomic_add(&_bound_pointsupdated[prim_id], 1);
+                dual_solve = 1;
                 break;
             }
 #if defined(HAS_restmatrix) && defined(HAS_bendstiffness) && defined(HAS_dampingratio) && defined(HAS_benddampingratio)
@@ -1171,13 +1176,27 @@ kernel void solveConstraints(
             vstore3(P, idx, _bound_P);
         }
     }
-    
-    // Dual update for AVBD, it's 2x faster to run it here than in a separate prim kernel
+
+#if defined(HAS_omega) && defined(HAS_plastiter) && defined(HAS_iteration)
+    // Accelerated convergence, tends to explode so disabled by default
+    const fpreal omega = getAcceleratorOmega(iteration + 1, accel_rho, _bound_omega[idx]);
+    _bound_omega[idx] = omega;
+
+    const fpreal3 plast = vload3(idx, _bound_plastiter);
+    P = plast + (P - plast) * omega;
+    vstore3(P, idx, _bound_P);
+
+    vstore3(P_before_solve, idx, _bound_plastiter);
+#endif
+
+    if (!dual_solve) return;
+
+    // Dual solve for AVBD, 2x faster to run it here than in a separate prim kernel
     for (int constraint_id = 0; constraint_id < num_constraints; ++constraint_id)
     {
         const int prim_id = compAt(_bound_pointprims, coloredidx, constraint_id);
         
-        // Dual solve is only correct once all points of the constraint are updated
+        // Dual solve is only valid once all points of the constraint are updated
         const int points_updated = _bound_pointsupdated[prim_id];
         if (points_updated != num_constraints) continue;
         
@@ -1200,16 +1219,4 @@ kernel void solveConstraints(
             }
         }
     }
-
-#if defined(HAS_omega) && defined(HAS_plastiter) && defined(HAS_iteration)
-    // Accelerated convergence, tends to explode so disabled by default
-    const fpreal omega = getAcceleratorOmega(iteration + 1, accel_rho, _bound_omega[idx]);
-    _bound_omega[idx] = omega;
-
-    const fpreal3 plast = vload3(idx, _bound_plastiter);
-    P = plast + (P - plast) * omega;
-    vstore3(P, idx, _bound_P);
-
-    vstore3(P_before_solve, idx, _bound_plastiter);
-#endif
 }
