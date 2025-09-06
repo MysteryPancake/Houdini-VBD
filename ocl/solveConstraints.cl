@@ -262,12 +262,12 @@ static int computeConstraint_SpringAVBD(
     
     const fpreal restlength = _bound_restlength[prim_id];
 
-    // Compute constraint and derivatives
     *d = p0 - p1;
     const fpreal dlen2 = dot(*d, *d);
     if (dlen2 == 0.0f) return 0;
-    
     *dlen = sqrt(dlen2);
+    
+    // C is the constraint error
     *C = *dlen - restlength;
 
     return 1;
@@ -401,7 +401,7 @@ static void computeConstraint_JointAVBD(
     // C0 is the difference in position (p0 - p1), computed during the dual update
     const fpreal3 C0 = vload3(prim_id, _bound_C);
     
-    // Compute constraint and derivatives
+    // C is the constraint error
     *C = p0 - p1;
     
     // Store stabilized constraint function, if a hard constraint (Eq. 18)
