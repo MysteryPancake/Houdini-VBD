@@ -1,4 +1,4 @@
-# Houdini Vertex Block Descent
+# Houdini Augmented Vertex Block Descent
 
 <img src="./images/demo.webp" width="25%"></img>
 <img src="./images/demo2.webp" width="45%"></img>
