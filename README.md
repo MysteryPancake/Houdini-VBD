@@ -78,6 +78,7 @@ Thanks to Anka He Chen and Chris Giles for making these open source with permiss
   - [ ] SDF collisions
   - [ ] Add bounce for collisions
   - [ ] Stop everything exploding all the time
+  - [ ] Convert from HDALC -> HDA
 - [ ] Touch grass
 
 ## BREAKING NEWS: Otis Solver!
