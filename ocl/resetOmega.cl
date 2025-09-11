@@ -1,7 +1,9 @@
-#bind point &omega fpreal val=1
-
 // For accelerated convergence, tends to explode so it's disabled by default
-@KERNEL
+kernel void resetOmega( 
+    int omega_length,
+    global fpreal * restrict omega)
 {
-    @omega.set(1);
+    const int idx = get_global_id(0);
+    if (idx >= omega_length) return;
+    omega[idx] = 1.0f;
 }

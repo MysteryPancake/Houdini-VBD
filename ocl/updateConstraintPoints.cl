@@ -1,11 +1,18 @@
-#bind point P fpreal3
-#bind point coloredidx int geo=ConstraintGeometry
-#bind point &Pcom fpreal3 name=P geo=ConstraintGeometry
-
-@KERNEL
+kernel void updateConstraintPoints(
+    int _bound_Pcon_length,
+    global fpreal * restrict _bound_Pcon,
+    int _bound_coloredidx_length,
+    global int * restrict _bound_coloredidx,
+    int _bound_P_length,
+    global fpreal * restrict _bound_P)
 {
-    // Skip non-matching points
-    if (@coloredidx < 0) return;
+    const int idx = get_global_id(0);
+    if (idx >= _bound_Pcon_length) return;
 
-    @Pcon.set(@P.getAt(@coloredidx));
+    // Skip non-matching points
+    const int coloredidx = _bound_coloredidx[idx];
+    if (coloredidx < 0 || coloredidx >= _bound_Pcon_length) return;
+
+    const fpreal3 P = vload3(coloredidx, _bound_P);
+    vstore3(P, coloredidx, _bound_Pcon);
 }

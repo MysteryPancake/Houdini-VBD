@@ -1,19 +1,36 @@
-#bind point &v fpreal3
-#bind point P fpreal3
-#bind point pprevious fpreal3
-#bind point ?plast fpreal3
-#bind point mass fpreal val=1
-#bind point stopped int val=0
-
-@KERNEL
+kernel void updateVelocity_vellum( 
+    fpreal timeinc,
+    int _bound_v_length,
+    global fpreal * restrict _bound_v,
+    int _bound_P_length,
+    global fpreal * restrict _bound_P,
+    int _bound_pprevious_length,
+    global fpreal * restrict _bound_pprevious,
+#ifdef HAS_plast
+    int _bound_plast_length,
+    global fpreal * restrict _bound_plast,
+#endif
+    int _bound_mass_length,
+    global fpreal * restrict _bound_mass,
+    int _bound_stopped_length,
+    global int * restrict _bound_stopped)
 {
-    if (@mass <= 0 || @stopped) return; // Skip pinned points
+    int idx = get_global_id(0);
+    if (idx >= _bound_v_length) return;
+    
+    const fpreal mass = _bound_mass[idx];
+    const int stopped = _bound_stopped[idx];
+    if (mass <= 0.0f || stopped) return; // Skip pinned points
 
+    const fpreal3 P = vload3(idx, _bound_P);
+    const fpreal3 pprevious = vload3(idx, _bound_pprevious);
+    
 #ifdef HAS_plast
     // Second order integration
-    @v.set(((2 * @P + (@P + @plast)) - 4 * @pprevious) / (2 * @TimeInc));
+    const fpreal3 plast = vload3(idx, _bound_plast);
+    vstore3(((2.0f * P + (P + plast)) - 4.0f * pprevious) / (2.0f * timeinc), idx, _bound_v);
 #else
     // First order integration
-    @v.set((@P - @pprevious) / @TimeInc);
+    vstore3((P - pprevious) / timeinc, idx, _bound_v);
 #endif
 }

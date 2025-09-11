@@ -1052,8 +1052,7 @@ kernel void solveConstraints(
     int _bound_C_length,
     global fpreal * restrict _bound_C,
     int _bound_pointsupdated_length,
-    global int * restrict _bound_pointsupdated
-)
+    global int * restrict _bound_pointsupdated)
 {
     // Like Vellum, everything here is based on timeinc
     if (timeinc == 0.0f) return;

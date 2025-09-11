@@ -3,28 +3,20 @@
 #define AVBD_SPRING -1715226869
 #define AVBD_JOINT -1456250084
 
-#bind parm alpha fpreal
-#bind parm gamma fpreal
-#bind parm PENALTY_MIN fpreal
-#bind parm PENALTY_MAX fpreal
+// Faster but memory unsafe
+#define entriesAt_unsafe(_arr_, _idx_) (_arr_##_index[_idx_+1] - _arr_##_index[_idx_])
+#define compAt_unsafe(_arr_, _idx_, _compidx_) _arr_[_arr_##_index[_idx_] + _compidx_]
 
-#bind point P fpreal3
-#bind prim primpoints int[] geo=ConstraintGeometry name=pts
-#bind prim &C fpreal3 geo=ConstraintGeometry
-#bind prim &lambda fpreal3 geo=ConstraintGeometry
-#bind prim &penalty fpreal3 geo=ConstraintGeometry
-#bind prim stiffness fpreal geo=ConstraintGeometry
-#bind prim type_hash int geo=ConstraintGeometry
-#bind prim &pointsupdated int geo=ConstraintGeometry
+#define entriesAt(_arr_, _idx_) ((_idx_ >= 0 && _idx_ < _arr_##_length) ? (_arr_##_index[_idx_+1] - _arr_##_index[_idx_]) : 0)
+#define compAt(_arr_, _idx_, _compidx_) ((_idx_ >= 0 && _idx_ < _arr_##_length && _compidx_ >= 0 && _compidx_ < entriesAt_unsafe(_arr_, _idx_)) ? _arr_[_arr_##_index[_idx_] + _compidx_] : 0)
 
 // Rough approximation to match Vellum
 // Shared with solveConstraints.cl
 const fpreal STIFFNESS_SCALE = 10.0f;
 
 // From https://github.com/savant117/avbd-demo2d/blob/main/source/joint.cpp#L27
-// Abusing #define variable naming to use @ bindings here
 static void initialize_JointAVBD(
-    const int _bound_idx,
+    const int prim_id,
     global int *_bound_primpoints,
     global int *_bound_primpoints_index,
     const int _bound_primpoints_length,
@@ -33,22 +25,48 @@ static void initialize_JointAVBD(
     const fpreal *_bound_C,
     const int _bound_C_length)
 {
-    const int pt0 = @primpoints.compAt(_bound_idx, 0);
-    const int pt1 = @primpoints.compAt(_bound_idx, 1);
+    const int pt0 = compAt(_bound_primpoints, prim_id, 0);
+    const int pt1 = compAt(_bound_primpoints, prim_id, 1);
 
-    const fpreal3 p0 = @P.getAt(pt0);
-    const fpreal3 p1 = @P.getAt(pt1);
+    const fpreal3 p0 = vload3(pt0, _bound_P);
+    const fpreal3 p1 = vload3(pt1, _bound_P);
     
     // C is the difference in position between each connected point
-    @C.set(p0 - p1);
+    vstore3(p0 - p1, prim_id, _bound_C);
 }
 
 // Dual update from AVBD
 // From https://github.com/savant117/avbd-demo2d/blob/main/source/solver.cpp#L105
-@KERNEL
+kernel void forwardStepDual( 
+    fpreal alpha,
+    fpreal gamma,
+    fpreal PENALTY_MIN,
+    fpreal PENALTY_MAX,
+    int _bound_P_length,
+    global fpreal * restrict _bound_P,
+    int _bound_primpoints_length,
+    global int * restrict _bound_primpoints_index,
+    global int * restrict _bound_primpoints,
+    int _bound_C_length,
+    global fpreal * restrict _bound_C,
+    int _bound_lambda_length,
+    global fpreal * restrict _bound_lambda,
+    int _bound_penalty_length,
+    global fpreal * restrict _bound_penalty,
+    int _bound_stiffness_length,
+    global fpreal * restrict _bound_stiffness,
+    int _bound_type_hash_length,
+    global int * restrict _bound_type_hash,
+    int _bound_pointsupdated_length,
+    global int * restrict _bound_pointsupdated
+)
 {
+    const int idx = get_global_id(0);
+    if (idx >= _bound_C_length) return;
+
     // Some constraints use initialization in the dual step
-    switch (@type_hash)
+    const int type = _bound_type_hash[idx];
+    switch (type)
     {
         case AVBD_SPRING:
         {
@@ -57,9 +75,8 @@ static void initialize_JointAVBD(
         }
         case AVBD_JOINT:
         {
-            // @ binding syntax isn't supported for _index array yet
-            initialize_JointAVBD(@elemnum, @primpoints.data, _bound_primpoints_index, @primpoints.len,
-                @P.data, @P.len, @C.data, @C.len);
+            initialize_JointAVBD(idx, _bound_primpoints, _bound_primpoints_index, _bound_primpoints_length,
+                _bound_P, _bound_P_length, _bound_C, _bound_C_length);
             break;
         }
         default:
@@ -70,15 +87,18 @@ static void initialize_JointAVBD(
     }
     
     // Warmstart the dual variables and penalty parameters (Eq. 19)
-    @lambda.set(@lambda * @alpha * @gamma);
+    const fpreal3 lambda = vload3(idx, _bound_lambda);
+    vstore3(lambda * alpha * gamma, idx, _bound_lambda);
     
     // Penalty is safely clamped to a minimum and maximum value
-    const fpreal3 penalty = clamp(@penalty * @gamma, @PENALTY_MIN, @PENALTY_MAX);
+    fpreal3 penalty = vload3(idx, _bound_penalty);
+    penalty = clamp(penalty * gamma, PENALTY_MIN, PENALTY_MAX);
     
     // If it's not a hard constraint, we don't let the penalty exceed the material stiffness
-    @penalty.set(min(penalty, @stiffness * STIFFNESS_SCALE));
+    const fpreal stiffness = _bound_stiffness[idx];
+    vstore3(min(penalty, (fpreal3)(stiffness * STIFFNESS_SCALE)), idx, _bound_penalty);
     
     // Dual updating is normally 2x slower when run separately to solveConstraints
     // Luckily it can be merged into solveConstraints, as long as it happens after the last point update
-    @pointsupdated.set(0);
+    _bound_pointsupdated[idx] = 0;
 }
