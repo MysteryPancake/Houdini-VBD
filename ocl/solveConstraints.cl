@@ -1121,7 +1121,8 @@ kernel void solveConstraints(
                     _bound_P, _bound_stiffness, _bound_restlength, _bound_lambda, _bound_penalty,
                     _bound_fmin, _bound_fmax);
                 // Dual solving is allowed once we've updated all points for this prim
-                dual_solve |= (atomic_add(&_bound_pointsupdated[prim_id], 1) + 1) == num_constraints;
+                const int prev = atomic_inc(&_bound_pointsupdated[prim_id]);
+                dual_solve |= num_constraints == (prev + 1);
                 break;
             }
             case AVBD_JOINT:
@@ -1131,7 +1132,8 @@ kernel void solveConstraints(
                     _bound_P, _bound_stiffness, _bound_C, _bound_lambda, _bound_penalty, _bound_fmin,
                     _bound_fmax, alpha);
                 // Dual solving is allowed once we've updated all points for this prim
-                dual_solve |= (atomic_add(&_bound_pointsupdated[prim_id], 1) + 1) == num_constraints;
+                const int prev = atomic_inc(&_bound_pointsupdated[prim_id]);
+                dual_solve |= num_constraints == (prev + 1);
                 break;
             }
 #if defined(HAS_restmatrix) && defined(HAS_bendstiffness) && defined(HAS_dampingratio) && defined(HAS_benddampingratio)
