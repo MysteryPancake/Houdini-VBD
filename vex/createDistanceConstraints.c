@@ -11,4 +11,9 @@ void createDistanceConstraintFixed(const int geo; const int ptnum; const string 
     }
 }
 
-createDistanceConstraintFixed(1, @ptnum, "__constraintsrcorig", geoself(), "__stretchconstraints");
+if (nedgesgroup(1, "__constraintsrcorig") > 0) {
+    // Correct behaviour for prim and edge groups
+    createDistanceConstraintFixed(1, @ptnum, "__constraintsrcorig", geoself(), "__stretchconstraints");
+} else {
+    createDistanceConstraint(1, @ptnum, "__constraintsrc", geoself(), "__stretchconstraints");
+}
