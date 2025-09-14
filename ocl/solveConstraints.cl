@@ -1094,7 +1094,7 @@ kernel void solveConstraints(
         mat3copy(hessian, tmp_hessian);
     }
     
-    // Only use dual solving when AVBD constraints are connected
+    // Only dual solve when AVBD constraints are connected
     int dual_solve = 0;
     
     // Accumulate energy for each constraint connected to the current point
@@ -1185,6 +1185,38 @@ kernel void solveConstraints(
         }
     }
 
+    // Dual solve for AVBD, faster to run it here than in a separate kernel
+    if (dual_solve)
+    {
+        for (int constraint_id = 0; constraint_id < num_constraints; ++constraint_id)
+        {
+            const int prim_id = compAt(_bound_pointprims, coloredidx, constraint_id);
+            
+            // Dual solving is only allowed once all points of the constraint are updated
+            const int points_updated = _bound_pointsupdated[prim_id];
+            if (points_updated != num_constraints) continue;
+            
+            const int constraint_type = _bound_type[prim_id];
+            switch (constraint_type)
+            {
+                case AVBD_SPRING:
+                {
+                    dualUpdate_SpringAVBD(prim_id, _bound_primpoints, _bound_primpoints_index, _bound_primpoints_length,
+                        _bound_P, _bound_stiffness, _bound_restlength, _bound_lambda, _bound_penalty,
+                        _bound_fmin, _bound_fmax, _bound_broken, _bound_breakthreshold, beta, PENALTY_MAX);
+                    break;
+                }
+                case AVBD_JOINT:
+                {
+                    dualUpdate_JointAVBD(prim_id, _bound_primpoints, _bound_primpoints_index, _bound_primpoints_length,
+                        _bound_P, _bound_stiffness, _bound_C, _bound_lambda, _bound_penalty,
+                        _bound_fmin, _bound_fmax, _bound_broken, _bound_breakthreshold, alpha, beta, PENALTY_MAX);
+                    break;
+                }
+            }
+        }
+    }
+    
 #if defined(HAS_omega) && defined(HAS_plastiter) && defined(HAS_iteration)
     // Accelerated convergence, tends to explode so disabled by default
     const fpreal omega = _getAcceleratorOmega(iteration + 1, accel_rho, _bound_omega[idx]);
@@ -1196,35 +1228,4 @@ kernel void solveConstraints(
 
     vstore3(P_before_solve, idx, _bound_plastiter);
 #endif
-
-    if (!dual_solve) return;
-
-    // Dual solve for AVBD, 2x faster to run it here than in a separate prim kernel
-    for (int constraint_id = 0; constraint_id < num_constraints; ++constraint_id)
-    {
-        const int prim_id = compAt(_bound_pointprims, coloredidx, constraint_id);
-        
-        // Dual solve is only valid once all points of the constraint are updated
-        const int points_updated = _bound_pointsupdated[prim_id];
-        if (points_updated != num_constraints) continue;
-        
-        const int constraint_type = _bound_type[prim_id];
-        switch (constraint_type)
-        {
-            case AVBD_SPRING:
-            {
-                dualUpdate_SpringAVBD(prim_id, _bound_primpoints, _bound_primpoints_index, _bound_primpoints_length,
-                    _bound_P, _bound_stiffness, _bound_restlength, _bound_lambda, _bound_penalty,
-                    _bound_fmin, _bound_fmax, _bound_broken, _bound_breakthreshold, beta, PENALTY_MAX);
-                break;
-            }
-            case AVBD_JOINT:
-            {
-                dualUpdate_JointAVBD(prim_id, _bound_primpoints, _bound_primpoints_index, _bound_primpoints_length,
-                    _bound_P, _bound_stiffness, _bound_C, _bound_lambda, _bound_penalty,
-                    _bound_fmin, _bound_fmax, _bound_broken, _bound_breakthreshold, alpha, beta, PENALTY_MAX);
-                break;
-            }
-        }
-    }
 }
