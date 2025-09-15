@@ -1,0 +1,1 @@
+i@group___blast = findattribvalcount(1, "point", "__idxorig", i@ptnum) <= 0;
