@@ -142,13 +142,13 @@ I've implemented most of these as different constraint types, so you can connect
 
 ## What's Augmented Vertex Block Descent?
 
-AVBD is an extension to VBD mainly to improve stiffness. It adds hard constraints, which is just an extension to regular constraints meaning the stiffness gets changed adaptively.
+AVBD is an extension to VBD mainly to improve stiffness. It adds hard constraints, an extension to regular constraints meaning the stiffness gets changed adaptively.
 
 Stiffness is stored on the prims, so both the points (primal elements) and prims (dual elements) must be updated. As you might expect, looping over both points and prims is around 2x slower. Luckily I found you can merge the dual solve logic by tracking how many points are updated. Once the last point is updated, it's safe to dual solve the prims.
 
 Adaptive stiffness currently only affects AVBD constraints. Eventually I'll rewrite the other VBD constraints to use it too.
 
-AVBD also includes rigid bodies in a hacky way. Instead of solving each point of the rigid body, they represent the entire body as one point (like a packed prim). This means each point can have a rigid rotation, included in the hessian for better results.
+AVBD also includes rigid bodies in a hacky way. Instead of solving each point of the rigid body, they solve the entire body as one point with 6 DOF (like a packed prim). This allows each point to have a rotation, included in the hessian for better results.
 
 I think this is misleading, it gives a false impression of stiffness and goes against the design of VBD, but I'll eventually include packed prims and their rotations in the hessians. For now AVBD constraints solve translation but not rigid rotation.
 
