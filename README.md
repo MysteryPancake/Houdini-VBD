@@ -54,7 +54,7 @@ Thanks to Anka He Chen and Chris Giles for making these open source with permiss
   - [x] [Hessian LDLT decomposition](https://github.com/savant117/avbd-demo2d/blob/main/source/maths.h#L325)
   - [x] [SPD hessian approximation](https://github.com/savant117/avbd-demo2d/blob/main/source/solver.cpp#L188) (section 3.5)
 
-### From [Vellum (XPBD)](https://www.sidefx.com/docs/houdini/vellum/overview.html)
+### From [Vellum](https://www.sidefx.com/docs/houdini/vellum/overview.html) (XPBD)
   - [x] Vellum integration (1st order, 2nd order)
   - [x] Self and external collisions (very buggy, to be replaced soon)
   - [x] Stopped, permanent and animated pin support
