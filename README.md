@@ -59,7 +59,10 @@ Thanks to Anka He Chen and Chris Giles for making these open source with permiss
   - [x] Self and external collisions (very buggy, to be replaced soon)
   - [x] Stopped, permanent and animated pin support
   - [x] Custom forces support
-  - [x] [Graph coloring](https://www.sidefx.com/docs/houdini/nodes/sop/graphcolor.html) (for points instead of prims)
+  - [x] [Graph coloring](https://www.sidefx.com/docs/houdini/nodes/sop/graphcolor.html)
+
+### From [Otis](https://www.sidefx.com/docs/houdini/nodes/sop/otissolver.html) (if Houdini 21 or above)
+  - [x] [Hessian approximation using eigenvalue projection](https://www.cs.columbia.edu/cg/abs-psd/paper.pdf)
 
 ## Todo
 - [ ] Steal from [NVIDIA Warp](https://github.com/NVIDIA/warp)
