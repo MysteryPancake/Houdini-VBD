@@ -46,8 +46,8 @@ Thanks to Anka He Chen and Chris Giles for making these open source with permiss
   - [x] [Ground damping](https://github.com/NVIDIA/warp/blob/main/warp/sim/integrator_vbd.py#L534)
 
 ### From [AVBD-2D](https://github.com/savant117/avbd-demo2d)
-  - [x] [Spring constraints](https://github.com/savant117/avbd-demo2d/blob/main/source/spring.cpp) (currently missing rigid rotation)
-  - [x] [Joint constraints](https://github.com/savant117/avbd-demo2d/blob/main/source/joint.cpp) (currently missing rigid rotation)
+  - [x] [Spring constraints](https://github.com/savant117/avbd-demo2d/blob/main/source/spring.cpp) (currently missing 6 DOF support)
+  - [x] [Joint constraints](https://github.com/savant117/avbd-demo2d/blob/main/source/joint.cpp) (currently missing 6 DOF support)
   - [x] [Hard constraints](https://github.com/savant117/avbd-demo2d/blob/main/source/solver.cpp#L181-L191) (adaptive stiffness for AVBD constraint types)
   - [x] [Dual constraint updates](https://github.com/savant117/avbd-demo2d/blob/main/source/solver.cpp#L205)
   - [x] [Breaking constraints](https://github.com/savant117/avbd-demo2d/blob/main/source/solver.cpp#L218)
@@ -74,7 +74,7 @@ Thanks to Anka He Chen and Chris Giles for making these open source with permiss
   - [ ] [Motor constraints](https://github.com/savant117/avbd-demo2d/blob/main/source/motor.cpp)
   - [ ] Sticking contacts
   - [ ] Post stabilization
-  - [ ] Rigid body support (packed prims)
+  - [ ] 6 DOF support (packed prims)
   - [ ] Hard constraints for collisions
   - [ ] Update all existing constraints to AVBD
 - [ ] Steal from myself
