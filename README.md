@@ -67,7 +67,7 @@ Thanks to Anka He Chen and Chris Giles for making these open source with permiss
 ## Todo
 - [ ] Steal from [NVIDIA Warp](https://github.com/NVIDIA/warp)
   - [ ] [StVK energy definition](https://github.com/NVIDIA/warp/blob/main/warp/sim/integrator_vbd.py) (for cloth)
-- [ ] Steal from [Gaia](https://github.com/AnkaChan/Gaia)
+- [ ] Steal from [Offset Geometric Contact](https://graphics.cs.utah.edu/research/projects/ogc/) or [AVBD](https://graphics.cs.utah.edu/research/projects/avbd/)
   - [ ] Self collisions
   - [ ] External collisions
 - [ ] Steal from [AVBD](https://graphics.cs.utah.edu/research/projects/avbd/)
@@ -77,6 +77,8 @@ Thanks to Anka He Chen and Chris Giles for making these open source with permiss
   - [ ] 6 DOF support (packed prims)
   - [ ] Hard constraints for collisions
   - [ ] Update all existing constraints to AVBD
+- [ ] Steal from [Stable Cosserat Rods](https://github.com/jerry060599/StableCosseratRods)
+  - [ ] Cosserat rod energy definition
 - [ ] Steal from myself
   - [ ] SDF collisions
   - [ ] Add bounce for collisions
