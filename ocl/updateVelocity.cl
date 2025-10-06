@@ -47,10 +47,10 @@ kernel void updateVelocity(
     
     // First order angular from AVBD (Eq. 7)
     // https://graphics.cs.utah.edu/research/projects/avbd/Augmented_VBD-SIGGRAPH25_RTL.pdf
-    const quat orient = vload4(idx, _bound_orient);
+    quat orient = vload4(idx, _bound_orient);
     const quat orientprevious = vload4(idx, _bound_orientprevious);
     
     // This assumes orientprevious is normalized
-    const quat orientdiff = qmultiply(orient, qconjugate(orientprevious));
-    vstore3((2.0f * orientdiff.xyz) / timeinc, idx, _bound_w);
+    orient = qmultiply(orient, qconjugate(orientprevious));
+    vstore3((2.0f * orient.xyz) / timeinc, idx, _bound_w);
 }

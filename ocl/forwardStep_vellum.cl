@@ -1,6 +1,6 @@
 #include <quaternion.h>
 
-kernel void forwardStep_vellum( 
+kernel void forwardStep_vellum(
     float timeinc,
     fpreal3 gravity,
     int _bound_P_length,

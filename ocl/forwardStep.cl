@@ -1,6 +1,6 @@
 #include <quaternion.h>
 
-kernel void forwardStep( 
+kernel void forwardStep(
     fpreal timeinc,
     int simframe,
     fpreal3 gravity,
