@@ -1,3 +1,5 @@
+#include <quaternion.h>
+
 kernel void forwardStep( 
     fpreal timeinc,
     int simframe,
@@ -16,7 +18,11 @@ kernel void forwardStep(
     int _bound_mass_length,
     global fpreal * restrict _bound_mass,
     int _bound_stopped_length,
-    global int * restrict _bound_stopped)
+    global int * restrict _bound_stopped,
+    int _bound_orient_length,
+    global fpreal * restrict _bound_orient,
+    int _bound_w_length,
+    global fpreal * restrict _bound_w)
 {
     int idx = get_global_id(0);
     if (idx >= _bound_P_length) return;
@@ -60,4 +66,11 @@ kernel void forwardStep(
         vstore3(P + vprevious * timeinc + gravity * accelWeight * timeinc * timeinc, idx, _bound_P);
     }
 #endif
+
+    // First order angular integration from AVBD (Eq. 9)
+    // https://graphics.cs.utah.edu/research/projects/avbd/Augmented_VBD-SIGGRAPH25_RTL.pdf
+    quat orient = vload4(idx, _bound_orient);
+    const fpreal3 w = vload3(idx, _bound_w);
+    orient += timeinc * 0.5f * qmultiply((quat)(w, 0.0f), orient);
+    vstore4(normalize(orient), idx, _bound_orient);
 }

@@ -161,6 +161,14 @@ static void accumulateInertiaForceAndHessian(
     _mat3adddiag(hessian, hessian, scale);
 }
 
+// Angular force and hessian, based on the AVBD paper
+static void accumulateInertiaForceAndHessianAngular(
+    fpreal3 *force_angular,
+    mat3 hessian_angular)
+{
+    // TODO
+}
+
 // SPD diagonal approximation of the hessian from AVBD
 // This greatly improves stability for stiff constraints, but causes issues with neo-hookean
 static void spdApproximation(mat3 h)
@@ -1094,6 +1102,13 @@ kernel void solveConstraints(
     
     // Include energy from inertia (includes gravity) and mass
     accumulateInertiaForceAndHessian(&force_linear, hessian_linear, mass, P, inertia, timeinc);
+
+    // Angular inertia, for 6 DOF update
+    const int is_rigid = _bound_rigid[idx];
+    if (is_rigid)
+    {
+        accumulateInertiaForceAndHessianAngular(&force_angular, hessian_angular);
+    }
     
     // Damping only affects the hessian for material forces in GAIA
     // https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBDPhysics.cpp#L2347-L2351
