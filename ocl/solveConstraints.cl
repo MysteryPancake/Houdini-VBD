@@ -1052,7 +1052,9 @@ kernel void solveConstraints(
     int _bound_C_length,
     global fpreal * restrict _bound_C,
     int _bound_pointsupdated_length,
-    global int * restrict _bound_pointsupdated)
+    global int * restrict _bound_pointsupdated,
+    int _bound_rigid_length,
+    global int * restrict _bound_rigid)
 {
     // Like Vellum, everything here is based on timeinc
     if (timeinc == 0.0f) return;
@@ -1077,21 +1079,28 @@ kernel void solveConstraints(
     const fpreal3 P_before_solve = P;
 #endif
     
-    // Everything gets added to the force and hessian below
-    // Then the position gets updated: P += force * invert(hessian)
-    fpreal3 force = (fpreal3)(0.0f);
-    mat3 hessian;
-    mat3zero(hessian);
+    // Everything gets accumulated to the force gradient and hessian below
+    // The position gets solved as P += force * invert(hessian)
+
+    // For points, the forces and hessians have 3 DOF (translation only)
+    fpreal3 force_linear = (fpreal3)(0.0f);
+    mat3 hessian_linear;
+    mat3zero(hessian_linear);
+
+    // For rigid bodies, the forces and hessians have 6 DOF (translation and rotation)
+    fpreal3 force_angular = (fpreal3)(0.0f);
+    mat3 hessian_angular;
+    mat3zero(hessian_angular);
     
-    // Include energy from inertia (this includes gravity) and mass
-    accumulateInertiaForceAndHessian(&force, hessian, mass, P, inertia, timeinc);
+    // Include energy from inertia (includes gravity) and mass
+    accumulateInertiaForceAndHessian(&force_linear, hessian_linear, mass, P, inertia, timeinc);
     
     // Damping only affects the hessian for material forces in GAIA
     // https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBDPhysics.cpp#L2347-L2351
     mat3 tmp_hessian;
     if (damping > 0.0f)
     {
-        mat3copy(hessian, tmp_hessian);
+        mat3copy(hessian_linear, tmp_hessian);
     }
     
     // Only dual solve when AVBD constraints are connected
@@ -1109,14 +1118,14 @@ kernel void solveConstraints(
         {
             case VBD_MASS_SPRING:
             {
-                accumulateMaterialForceAndHessian_MassSpring(&force, hessian, idx, prim_id,
+                accumulateMaterialForceAndHessian_MassSpring(&force_linear, hessian_linear, idx, prim_id,
                     _bound_primpoints, _bound_primpoints_index, _bound_primpoints_length,
                     _bound_P, _bound_stiffness, _bound_restlength, _bound_broken, _bound_breakthreshold);
                 break;
             }
             case AVBD_SPRING:
             {
-                accumulateMaterialForceAndHessian_SpringAVBD(&force, hessian, idx, prim_id,
+                accumulateMaterialForceAndHessian_SpringAVBD(&force_linear, hessian_linear, idx, prim_id,
                     _bound_primpoints, _bound_primpoints_index, _bound_primpoints_length,
                     _bound_P, _bound_stiffness, _bound_restlength, _bound_lambda, _bound_penalty,
                     _bound_fmin, _bound_fmax);
@@ -1127,7 +1136,7 @@ kernel void solveConstraints(
             }
             case AVBD_JOINT:
             {
-                accumulateMaterialForceAndHessian_JointAVBD(&force, hessian, idx, prim_id,
+                accumulateMaterialForceAndHessian_JointAVBD(&force_linear, hessian_linear, idx, prim_id,
                     _bound_primpoints, _bound_primpoints_index, _bound_primpoints_length,
                     _bound_P, _bound_stiffness, _bound_C, _bound_lambda, _bound_penalty, _bound_fmin,
                     _bound_fmax, alpha);
@@ -1139,7 +1148,7 @@ kernel void solveConstraints(
 #if defined(HAS_restmatrix) && defined(HAS_bendstiffness) && defined(HAS_dampingratio) && defined(HAS_benddampingratio)
             case VBD_NEO_HOOKEAN:
             {
-                accumulateMaterialForceAndHessian_NeoHookean(&force, hessian, idx, prim_id,
+                accumulateMaterialForceAndHessian_NeoHookean(&force_linear, hessian_linear, idx, prim_id,
                     _bound_primpoints, _bound_primpoints_index, _bound_primpoints_length,
                     _bound_P, _bound_pprevious, _bound_restlength, _bound_restmatrix,
                     _bound_stiffness, _bound_bendstiffness, _bound_dampingratio,
@@ -1154,35 +1163,35 @@ kernel void solveConstraints(
     if (damping > 0.0f)
     {
         mat3 K;
-        mat3sub(hessian, tmp_hessian, K);
-        accumulateDampingForceAndHessian(&force, hessian, (P - pprevious) / timeinc,
+        mat3sub(hessian_linear, tmp_hessian, K);
+        accumulateDampingForceAndHessian(&force_linear, hessian_linear, (P - pprevious) / timeinc,
             timeinc, K, damping * timeinc * DAMPING_SCALE);
     }
     
     if (use_ground && ground_stiffness > 0.0f)
     {
         accumulateBoundaryForceAndHessian(
-            &force, hessian, P, P - pprevious, ground_pos, normalize(ground_normal),
+            &force_linear, hessian_linear, P, P - pprevious, ground_pos, normalize(ground_normal),
             ground_stiffness, ground_damping * DAMPING_SCALE, ground_friction, ground_epsilon, timeinc);
     }
     
     // The core of VBD: P += force * invert(hessian)
     // Sadly invert(hessian) is mega unstable, so we bandaid it below
-    if (dot(force, force) > (min_force * min_force))
+    if (dot(force_linear, force_linear) > (min_force * min_force))
     {
         if (solve_method == 0)
         {
             fpreal3 descent_direction;
-            const int success = solveDirect(force, hessian, &descent_direction, min_hessian);
+            const int success = solveDirect(force_linear, hessian_linear, &descent_direction, min_hessian);
             if (success)
             {
                 P += descent_direction * convergence;
                 vstore3(P, idx, _bound_P);
             }
         }
-        else if (fabs(det3(hessian)) > min_hessian)
+        else if (fabs(det3(hessian_linear)) > min_hessian)
         {
-            P += solveLDLT(force, hessian) * convergence; // Requires the hessian to be SPD
+            P += solveLDLT(force_linear, hessian_linear) * convergence; // Requires the hessian to be SPD
             vstore3(P, idx, _bound_P);
         }
     }

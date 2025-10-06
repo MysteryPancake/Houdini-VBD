@@ -20,9 +20,9 @@ static void initialize_JointAVBD(
     global int *_bound_primpoints,
     global int *_bound_primpoints_index,
     const int _bound_primpoints_length,
-    const fpreal *_bound_P,
+    global fpreal *_bound_P,
     const int _bound_P_length,
-    const fpreal *_bound_C,
+    global fpreal *_bound_C,
     const int _bound_C_length)
 {
     const int pt0 = compAt(_bound_primpoints, prim_id, 0);
