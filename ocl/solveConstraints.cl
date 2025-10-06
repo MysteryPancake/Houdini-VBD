@@ -162,7 +162,7 @@ static void accumulateInertiaForceAndHessian(
 }
 
 // Angular force and hessian, based on the AVBD paper
-static void accumulateInertiaForceAndHessianAngular(
+static void accumulateInertiaForceAndHessian6DOF(
     fpreal3 *force_angular,
     mat3 hessian_angular)
 {
@@ -1114,7 +1114,7 @@ kernel void solveConstraints(
     const int is_rigid = _bound_rigid[idx];
     if (is_rigid)
     {
-        accumulateInertiaForceAndHessianAngular(&force_angular, hessian_angular);
+        accumulateInertiaForceAndHessian6DOF(&force_angular, hessian_angular);
     }
     
     // Damping only affects the hessian for material forces in GAIA

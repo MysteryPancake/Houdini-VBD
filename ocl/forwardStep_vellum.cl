@@ -78,6 +78,9 @@ kernel void forwardStep_vellum(
     const fpreal3 inertia = P + v * timeinc;
 #endif
 
+    vstore3(inertia, idx, _bound_inertia);
+    vstore3(inertia, idx, _bound_P);
+
 #ifdef HAS_stopped
     }
     // @stopped = 2 pins rotation
@@ -104,8 +107,6 @@ kernel void forwardStep_vellum(
     // First order integration
     orient += timeinc * 0.5f * qmultiply((quat)(w, 0.0f), orient);
 #endif
-    
+
     vstore4(normalize(orient), idx, _bound_orient);
-    vstore3(inertia, idx, _bound_inertia);
-    vstore3(inertia, idx, _bound_P);
 }
