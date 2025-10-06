@@ -59,11 +59,9 @@ kernel void forwardStep_vellum(
     // Second order integration (BDF2)
     const fpreal3 pprevious = vload3(idx, _bound_pprevious);
     const fpreal3 plast = vload3(idx, _bound_plast);
-    
     const fpreal3 vprevious = vload3(idx, _bound_vprevious);
     const fpreal3 vlast = vload3(idx, _bound_vlast);
     
-    // vprevious is 1 timestep ago, vlast is 2 timesteps ago
     v = (4.0f * vprevious - vlast + 2.0f * (v - vprevious)) / 3.0f;
     const fpreal3 inertia = (4.0f * pprevious - plast + 2.0f * timeinc * v) / 3.0f;
 #else
@@ -80,16 +78,13 @@ kernel void forwardStep_vellum(
     // Second order integration (BDF2)
     const quat orientprevious = vload4(idx, _bound_orientprevious);
     const quat orientlast = vload4(idx, _bound_orientlast);
-    
     const fpreal3 wprevious = vload3(idx, _bound_wprevious);
     const fpreal3 wlast = vload3(idx, _bound_wlast);
+    
     const fpreal3 dwdt = w - wprevious;
-    
-    // wprevious is 1 substep ago, wlast is 2 substeps ago
     w = (4.0f * wprevious - wlast + 2.0f * dwdt) / 3.0f;
-    // Vellum has a mistake where the last component is 1 instead of 0
+    // Vellum has a mistake below where the last component is 1 instead of 0
     const quat dqdt = 0.5f * qmultiply((quat)(w, 0.0f), orient);
-    
     orient = (4.0f * orientprevious - orientlast + 2.0f * timeinc * dqdt) / 3.0f;
 #else
     // First order integration
