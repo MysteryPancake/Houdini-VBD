@@ -1197,6 +1197,7 @@ kernel void solveConstraints(
     }
 
     // Dual solve for AVBD, faster to run it here than in a separate kernel
+    // TODO: This sometimes causes problems, split this into a separate kernel again
     if (dual_solve)
     {
         for (int constraint_id = 0; constraint_id < num_constraints; ++constraint_id)
