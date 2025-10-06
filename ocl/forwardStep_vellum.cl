@@ -25,8 +25,10 @@ kernel void forwardStep_vellum(
     global fpreal * restrict _bound_inertia,
     int _bound_mass_length,
     global fpreal * restrict _bound_mass,
+#ifdef HAS_stopped
     int _bound_stopped_length,
     global int * restrict _bound_stopped,
+#endif
 #ifdef HAS_orientlast
     int _bound_orientlast_length,
     global fpreal * restrict _bound_orientlast,
@@ -46,15 +48,21 @@ kernel void forwardStep_vellum(
     if (idx >= _bound_P_length) return;
 
     const fpreal mass = _bound_mass[idx];
+    if (mass <= 0.0f) return; // Skip pinned points
+
+#ifdef HAS_stopped
+    // @stopped = 1 pins position
     const int stopped = _bound_stopped[idx];
-    if (mass <= 0.0f || stopped) return; // Skip pinned points
-    
+    if (!(stopped & 1))
+    {
+#endif
+
     // Gravity gets added directly to the velocity
     // This is the same as adding it to the inertia as @gravity * @TimeInc * @TimeInc
     fpreal3 v = vload3(idx, _bound_v);
     v += gravity * timeinc;
     vstore3(v, idx, _bound_v);
-    
+        
 #if defined(HAS_plast) && defined(HAS_vlast)
     // Second order integration (BDF2)
     const fpreal3 pprevious = vload3(idx, _bound_pprevious);
@@ -68,6 +76,12 @@ kernel void forwardStep_vellum(
     // First order integration
     const fpreal3 P = vload3(idx, _bound_P);
     const fpreal3 inertia = P + v * timeinc;
+#endif
+
+#ifdef HAS_stopped
+    }
+    // @stopped = 2 pins rotation
+    if (stopped & 2) return;
 #endif
 
     // Angular integration

@@ -17,8 +17,10 @@ kernel void forwardStep(
     global fpreal * restrict _bound_vprevious,
     int _bound_mass_length,
     global fpreal * restrict _bound_mass,
+#ifdef HAS_stopped
     int _bound_stopped_length,
     global int * restrict _bound_stopped,
+#endif
     int _bound_orient_length,
     global fpreal * restrict _bound_orient,
     int _bound_w_length,
@@ -28,9 +30,15 @@ kernel void forwardStep(
     if (idx >= _bound_P_length) return;
 
     const fpreal mass = _bound_mass[idx];
+    if (mass <= 0.0f) return; // Skip pinned points
+
+#ifdef HAS_stopped
+    // @stopped = 1 pins position
     const int stopped = _bound_stopped[idx];
-    if (mass <= 0.0f || stopped) return; // Skip pinned points
-    
+    if (!(stopped & 1))
+    {
+#endif
+
     // Gravity gets added directly to the velocity
     // This is the same as adding it to the inertia as @gravity * @TimeInc * @TimeInc
     fpreal3 v = vload3(idx, _bound_v);
@@ -41,14 +49,16 @@ kernel void forwardStep(
     const fpreal3 P = vload3(idx, _bound_P);
     const fpreal3 inertia = P + v * timeinc;
     vstore3(inertia, idx, _bound_inertia);
-    
+        
 #if initialization == 0
     // Inertia
     const fpreal3 vprevious = vload3(idx, _bound_vprevious);
     vstore3(P + vprevious * timeinc, idx, _bound_P);
+    
 #elif initialization == 1
     // Inertia and acceleration
     vstore3(inertia, idx, _bound_P);
+    
 #elif initialization == 2
     // Adaptive
     if (simframe <= 2.0f)
@@ -65,6 +75,12 @@ kernel void forwardStep(
         const fpreal accelWeight = clamp(dot(accel, gravDir) / gravNorm, 0.0f, 1.0f);
         vstore3(P + vprevious * timeinc + gravity * accelWeight * timeinc * timeinc, idx, _bound_P);
     }
+#endif
+
+#ifdef HAS_stopped
+    }
+    // @stopped = 2 pins rotation
+    if (stopped & 2) return;
 #endif
 
     // First order angular integration from AVBD (Eq. 9)

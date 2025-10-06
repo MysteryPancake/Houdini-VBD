@@ -12,8 +12,10 @@ kernel void updateVelocity(
     global fpreal * restrict _bound_pprevious,
     int _bound_mass_length,
     global fpreal * restrict _bound_mass,
+#ifdef HAS_stopped
     int _bound_stopped_length,
     global int * restrict _bound_stopped,
+#endif
     int _bound_wprevious_length,
     global fpreal * restrict _bound_wprevious,
     int _bound_w_length,
@@ -28,9 +30,15 @@ kernel void updateVelocity(
     if (idx >= _bound_v_length) return;
 
     const fpreal mass = _bound_mass[idx];
-    const int stopped = _bound_stopped[idx];
-    if (mass <= 0.0f || stopped) return; // Skip pinned points
+    if (mass <= 0.0f) return; // Skip pinned points
     
+#ifdef HAS_stopped
+    // @stopped = 1 pins position
+    const int stopped = _bound_stopped[idx];
+    if (!(stopped & 1))
+    {
+#endif
+
     // Vellum sets @vprevious at the start of each substep, but VBD sets it here
     // This is not a typo, it's used for an acceleration estimate during adaptive warmstarting
     const fpreal3 v = vload3(idx, _bound_v);
@@ -44,6 +52,12 @@ kernel void updateVelocity(
     const fpreal3 P = vload3(idx, _bound_P);
     const fpreal3 pprevious = vload3(idx, _bound_pprevious);
     vstore3((P - pprevious) / timeinc, idx, _bound_v);
+        
+#ifdef HAS_stopped
+    }
+    // @stopped = 2 pins rotation
+    if (stopped & 2) return;
+#endif
     
     // First order angular from AVBD (Eq. 7)
     // https://graphics.cs.utah.edu/research/projects/avbd/Augmented_VBD-SIGGRAPH25_RTL.pdf

@@ -986,8 +986,10 @@ kernel void solveConstraints(
     global fpreal * restrict _bound_inertia,
     int _bound_mass_length,
     global fpreal * restrict _bound_mass,
+#ifdef HAS_stopped
     int _bound_stopped_length,
     global int * restrict _bound_stopped,
+#endif
     int _bound_pointprims_length,
     global int * restrict _bound_pointprims_index,
     global int * restrict _bound_pointprims,
@@ -1072,8 +1074,13 @@ kernel void solveConstraints(
     idx += color_offset;
     
     const fpreal mass = _bound_mass[idx];
+    if (mass <= 0.0f) return; // Skip pinned points
+    
+#ifdef HAS_stopped
+    // TODO: Update this once rotation is updated here too
     const int stopped = _bound_stopped[idx];
-    if (mass <= 0.0f || stopped) return; // Skip pinned points
+    if (stopped & 1) return;
+#endif
     
     // @coloredidx maps from Geometry to ConstraintGeometry pointprims
     int coloredidx = _bound_coloredidx[idx];
