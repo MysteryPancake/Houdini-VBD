@@ -287,7 +287,7 @@ I'm wondering how this applies to a cloth sim for example. Would you create a ri
 >
 > For a cloth sim, usually you'd use particles, and each AVBD vertex maps to one vertex of the rendered mesh - no reason to use rigid dofs for this. In general, just use whichever dof representation makes sense for what you are simulating - AVBD / VBD support all of them!
 
-### Converting between hessian and quaternion representation
+### Hessian to quaternion representation
 
 Hi Chris, I'm currently working on rewriting the logic for 6 DOF bodies based on the [AVBD paper](https://graphics.cs.utah.edu/research/projects/avbd/Augmented_VBD-SIGGRAPH25.pdf). I was hoping you could provide more information about the math used to translate between hessian and quaternion representations, as I couldn't find much information about it in the paper.
 
