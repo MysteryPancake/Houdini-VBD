@@ -271,7 +271,7 @@ I saw the [same code in TinyVBD](https://github.com/AnkaChan/TinyVBD/blob/main/m
 >
 > If we switched the order as suggested, then this acceleration would always be zero, and the adaptive warmstart would not help.
 
-### General design concerns
+### Rigid body design concerns
 
 Hi Chris, I've been looking through [the code for AVBD 2D](https://github.com/savant117/avbd-demo2d) and want to ask about the design. The way it's implemented seems strange, with many differences to the original paper. For example I was expecting cubes to be implemented as 4 points connected by hard constraints, but instead they're represented as a unique class of object (rigid).
 
@@ -282,6 +282,101 @@ I'm wondering how this applies to a cloth sim for example. Would you create a ri
 > AVBD and even VBD are not tied to the representation of the degrees of freedom (ie particles, rigid bodies, etc). You can use any representation that you wish. In AVBD we mainly showcased rigid bodies as these were the easiest to show examples of hard constraints. However, you could certainly create hard constraints between particles in AVBD. Also, collisions solved using AVBD are applicable to both particles and rigid bodies. Practically, when solving a particle vertex, you'd be solving a 3x3 system. With rigids, a 6x6 system.
 >
 > For a cloth sim, usually you'd use particles, and each AVBD vertex maps to one vertex of the rendered mesh - no reason to use rigid dofs for this. In general, just use whichever dof representation makes sense for what you are simulating - AVBD / VBD support all of them!
+
+### Converting between hessian and quaternion representation
+
+Hi Chris, I'm currently working on rewriting the logic for 6 DOF bodies based on the [AVBD paper](https://graphics.cs.utah.edu/research/projects/avbd/Augmented_VBD-SIGGRAPH25.pdf). I was hoping you could provide more information about the math used to translate between hessian and quaternion representations, as I couldn't find much information about it in the paper.
+
+In my implementation I used the same conventions as Vellum (XPBD) in Houdini. Using those conventions, `@w` is the angular velocity (`vector`) and `@orient` is the angle (`vector4` / `quaternion`).
+
+This means [equation 21](https://graphics.cs.utah.edu/research/projects/avbd/Augmented_VBD-SIGGRAPH25.pdf) looks like this:
+
+```c
+orient = normalize(orient + timeinc * 0.5f * qmultiply((quat)(w, 0.0f), orient));
+```
+
+And [equation 20](https://graphics.cs.utah.edu/research/projects/avbd/Augmented_VBD-SIGGRAPH25.pdf) looks like this:
+
+```c
+w = (2.0f * qmultiply(orient, qinvert(orientprevious)).xyz) / timeinc;
+```
+
+Both of these seem to work correctly, and give matching results to other rigid body solvers in Houdini.
+Where it gets foggy is translating between hessians and quaternions. It would be amazing to get more information about how this works in 3D.
+
+In [AVBD-2D](https://github.com/savant117/avbd-demo2d), the bottom section (`position->z`) and the sides of the hessian contain angular components:
+
+```c
+H = {
+    dxx.row[0].x, dxx.row[0].y, dxr.x,
+    dxx.row[1].x, dxx.row[1].y, dxr.y,
+    dxr.x,        dxr.y,        drr
+};
+```
+
+With 6 DOF, I'm guessing this becomes a 6x6 matrix where the corners are a mix of linear and angular, then angular in the bottom:
+
+```c
+H = { linear_hessian, linear_angular_hessian
+      linear_angular_hessian, angular_hessian };
+```
+
+If this is correct, I'm wondering how you reduced the 3x3 hessians (`linear_angular_hessian` and `angular_hessian`) into a single quaternion (`@orient` in my case) ?
+
+The 2D version solves both the linear and angular components using the same equation. In other words, it does this for everything:
+
+```c
+position += force * invert_LDLT(hessian);
+```
+
+I'm not sure how this works when you use quaternions. You can no longer simply add, since the angle is a `vector4` and the hessians are `matrix3`:
+
+```c
+orient += angular_force *  invert_LDLT(angular_hessian) // Doesn't work, angular_hessian is 3x3 and orient is vector4
+```
+
+I'm guessing the way this was handled is by flattening the 3 hessians to a `vector` representation:
+
+```c
+vector vector_representation; // Something involving angular_hessian
+orient = normalize(orient + 0.5 * qmultiply((quat)(flat_vector3_representation, 0), orient));
+```
+
+Is this correct? If so, I'm very curious about the exact logic used here.
+
+> So in 3D, your intuition is spot on. You'll first build a 6x6 system like:
+> 
+> ```c
+> H = { linear_hessian, linear_angular_hessian
+>       linear_angular_hessian, angular_hessian };
+>  ```
+>
+> Then you solve for the 6d update:
+>
+> ```c
+> dx = force * invert_LDLT(H)
+> ```
+>
+> Then:
+>
+> ```c
+> position += dx(0, 3)
+> orient = normalize(orient + 0.5 * qmultiply((quat)(dx(3, 6), 0), orient));
+> ```
+> 
+> Actually in our code, we just override the `+=` operator for quaternions to perform the above quaternion update.
+>
+> Conceptually, when computing dx, for the angular part we are really getting a rotation vector, which is then used to update the actual orientation representation. The quaternion math there is just converting the rotation vector update to a quaternion update.
+>
+> Note that you don't *have* to use quaternions for your angular representation (which would change the angular update rule). For example, if your orientation was also using rotation vectors as the representation, then you can directly add the orientation update using plain `+=`. (I wouldn't recommend rotation vectors in practice since they have various issues, just illustrating the point)
+>
+> Another representation that can work is a 3x3 rotation matrix. This would also have a different update rule for `+=` (Rodriguez formula).
+>
+> We are currently working on a 3d version of the 2d demo which should provide a good reference implementation. But hopefully that helps you in the meantime!
+>
+> Forgot to mention, checkout [this paper's appendix](https://www.cs.mcgill.ca/~sandre17/geomstiffness) (*Geometric Stiffness for Real-time Constrained Multibody Dynamics* by Andrews et al.) for some derivations of the hessian for various constraint types.
+>
+> You'll see references to `lambda`, you just replace those with the force `F = K * C + lambda`.
 
 ## How does Vertex Block Descent run?
 
