@@ -312,9 +312,9 @@ In [AVBD-2D](https://github.com/savant117/avbd-demo2d), the bottom section (`pos
 
 ```c
 H = {
-    dxx.row[0].x, dxx.row[0].y, dxr.x,
-    dxx.row[1].x, dxx.row[1].y, dxr.y,
-    dxr.x,        dxr.y,        drr
+    dxx.row[0].x, dxx.row[0].y, dxr.x, // dxr is angular
+    dxx.row[1].x, dxx.row[1].y, dxr.y, // dxr is angular
+    dxr.x,        dxr.y,        drr    // dxr and drr are angular
 };
 ```
 
