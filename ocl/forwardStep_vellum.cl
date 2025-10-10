@@ -93,13 +93,13 @@ kernel void forwardStep_vellum(
     
 #if defined(HAS_orientlast) && defined(HAS_wlast)
     // Second order integration (BDF2)
+    // This isn't actually valid for quaternions, causes some weird results
     const quat orientprevious = vload4(idx, _bound_orientprevious);
     const quat orientlast = vload4(idx, _bound_orientlast);
     const fpreal3 wprevious = vload3(idx, _bound_wprevious);
     const fpreal3 wlast = vload3(idx, _bound_wlast);
     
-    const fpreal3 dwdt = w - wprevious;
-    w = (4.0f * wprevious - wlast + 2.0f * dwdt) / 3.0f;
+    w = (4.0f * wprevious - wlast + 2.0f * (w - wprevious)) / 3.0f;
     // Vellum has a mistake below where the last component is 1 instead of 0
     const quat dqdt = 0.5f * qmultiply((quat)(w, 0.0f), orient);
     orient = (4.0f * orientprevious - orientlast + 2.0f * timeinc * dqdt) / 3.0f;

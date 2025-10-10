@@ -65,6 +65,7 @@ kernel void updateVelocity_vellum(
 
 #ifdef HAS_orientlast
     // Second order integration (BDF2)
+    // This isn't actually valid for quaternions, causes some weird results
     const quat orientlast = vload4(idx, _bound_orientlast);
     orient = qmultiply(3.0f * orient - 4.0f * orientprevious + orientlast, qconjugate(orient));
     vstore3(orient.xyz / timeinc, idx, _bound_w);
