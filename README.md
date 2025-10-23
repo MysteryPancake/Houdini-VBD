@@ -98,13 +98,13 @@ Currently it's specialized for muscle and tissue, so it might be a while until i
 
 VBD is very similar to Vellum. The main differences are constraints and collisions.
 
-Vellum uses a technique called [XPBD (Extended Position-Based Dynamics)](https://matthias-research.github.io/pages/publications/XPBD.pdf). XPBD uses constraints to simulate soft body behaviour. Constraints are solved in parallel workgroups (colors) in OpenCL for better performance. Colors are groups of constraints that aren't directly connected.
+Vellum uses a technique called [XPBD (Extended Position-Based Dynamics)](https://matthias-research.github.io/pages/publications/XPBD.pdf). XPBD uses constraints to simulate soft body behaviour. Constraints are solved in parallel worksets (colors) in OpenCL for better performance. Colors are groups of constraints that aren't directly connected.
 
 Cloth is a good example of a soft body. It's easy to bend but hard to stretch. In XPBD this is simulated with distance constraints. Distance constraints try to preserve their rest length. When you stretch or squash a distance constraint, it pulls the points towards the middle until they reach their rest length again. Since shortening one constraint makes others longer, it's an iterative process. It propagates over several iterations until everything converges to the target length.
 
 <img src="./images/edging.png" width="700">
 
-VBD constraints are similar, but they're defined in terms of energy instead. The goal is reducing overall variational energy by reducing local energy per point. VBD constraints run over each point rather than each prim, meaning less workgroups (colors) overall. The Graph Color node allows workgroups for points as well as prims, so it works both for VBD and XPBD.
+VBD constraints are similar, but they're defined in terms of energy instead. The goal is reducing overall variational energy by reducing local energy per point. VBD constraints run over each point rather than each prim, meaning less worksets (colors) overall. The Graph Color node allows worksets for points as well as prims, so it works both for VBD and XPBD.
 
 <img src="./images/energyreduction.png" width="700">
 
@@ -126,7 +126,7 @@ Here's a comparison between Vellum and VBD:
 
 |  | Vellum (XPBD) | VBD | Advantage | Disadvantage |
 | --- | --- | --- | --- | --- |
-| **Runs over** | <p align="center">Prim colors<br><img src="./images/color_prims.png" height="120"></p> | <p align="center">Point colors<br><img src="./images/color_points.png" height="120"></p> | Less colors/workgroups, better for parallelization (in theory) | Takes longer to converge for stiff constraints |
+| **Runs over** | <p align="center">Prim colors<br><img src="./images/color_prims.png" height="120"></p> | <p align="center">Point colors<br><img src="./images/color_points.png" height="120"></p> | Less colors/worksets, better for parallelization (in theory) | Takes longer to converge for stiff constraints |
 | **Iterations** | Gauss-Seidel (for constraint iterations) and Jacobi (for smoothing iterations) | Gauss-Seidel | Reaches a global solution faster | May introduce jittering |
 | **Integration** | Inertia + acceleration | Inertia + acceleration or adaptive | Better energy preservation | Strange gravity reduction issues |
 | **Constraints** | XPBD based | Energy based | Better for larger mass ratios | Randomly explodes due to hessian matrix inversion |
@@ -162,7 +162,7 @@ Personally I think dual updates could help, but not in the form implemented by A
 
 Despite the hype, sadly not. It's near impossible for VBD to be faster than XPBD.
 
-On paper VBD is faster because it runs over points, which have less graph colors than prims. Graph colors control the number of workgroups, meaning how many points can be processed at the same time.
+On paper VBD is faster because it runs over points, which have less graph colors than prims. Graph colors control the number of worksets, meaning how many points can be processed at the same time.
 
 <img src="./images/vellum_vs_vbd.png" height="500">
 
@@ -429,7 +429,7 @@ When the hessian doesn't explode, moving the position reduces the overall variat
 In AVBD, `lambda` and `penalty` change the results of `accumulateMaterialForceAndHessian()`.
 
 > [!CAUTION]
-> **This should be run in workgroups based on graph coloring!**
+> **This should be run in worksets based on graph coloring!**
 >
 > If points move while their neighbours access them (like if running in sequential order), it breaks the assumption used by VBD:
 > 
