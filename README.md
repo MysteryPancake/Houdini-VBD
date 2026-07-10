@@ -1,12 +1,14 @@
 # Houdini Augmented Vertex Block Descent
 
-<img src="./images/demo.webp" width="25%"></img>
-<img src="./images/demo2.webp" width="45%"></img>
-<img src="./images/avbd_dual.webp" width="45%"></img>
-<img src="./images/breaking.webp" width="45%"></img>
-<a href="https://youtu.be/VbLSCm5xQ4o">
-  <img src="https://img.youtube.com/vi/VbLSCm5xQ4o/mqdefault.jpg" width="45%">
-</a>
+<p align="left">
+  <img src="./images/demo.webp" width="25%">
+  <img src="./images/demo2.webp" width="45%">
+  <img src="./images/avbd_dual.webp" width="45%">
+  <img src="./images/breaking.webp" width="45%">
+  <a href="https://youtu.be/VbLSCm5xQ4o">
+    <img src="https://img.youtube.com/vi/VbLSCm5xQ4o/mqdefault.jpg" width="45%">
+  </a>
+</p>
 
 WIP of Vertex Block Descent (VBD) in Houdini. It runs natively without plugins, as god intended.
 
