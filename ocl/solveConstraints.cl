@@ -32,8 +32,8 @@
 const fpreal STIFFNESS_SCALE = 10.0f;
 const fpreal DAMPING_SCALE = 0.001f;
 
-typedef fpreal fpreal9[9];
-typedef fpreal9 mat9[9];
+typedef fpreal _fpreal9[9];
+typedef _fpreal9 _mat9[9];
 
 // Prefixed in case these get added to matrix.h later
 static fpreal3 _mat32vecmul(const mat32 a, const fpreal2 b)
@@ -562,8 +562,8 @@ static void accumulateMaterialForceAndHessian_MassSpring(
 // For neo-hookean constraints, turn the 9x9 deformation gradient into a 3x3 hessian
 // From https://github.com/AnkaChan/Gaia/blob/main/Simulator/Modules/VBD/VBD_NeoHookean.cpp#L126
 static void assembleForceAndHessian_NeoHookean(
-    const fpreal9 dE_dF,
-    const mat9 d2E_dF,
+    const _fpreal9 dE_dF,
+    const _mat9 d2E_dF,
     const fpreal m1,
     const fpreal m2,
     const fpreal m3,
@@ -662,7 +662,7 @@ static void accumulateMaterialForceAndHessian_NeoHookean(
     const fpreal3 c1 = cross(F3, F1);
     const fpreal3 c2 = cross(F1, F2);
 
-    const fpreal9 ddetF_dF = {
+    const _fpreal9 ddetF_dF = {
         c0.x, c1.x, c2.x,
         c0.y, c1.y, c2.y,
         c0.z, c1.z, c2.z
@@ -676,7 +676,7 @@ static void accumulateMaterialForceAndHessian_NeoHookean(
     
     // Tets need a 9x9 hessian (second derivative of energy w.r.t the deformation gradient)
     // Vellum only uses a few cross products per tet, so this is much slower
-    mat9 d2E_dF_dF;
+    _mat9 d2E_dF_dF;
     
     // Diagonal parts
     d2E_dF_dF[0][0] = scale_lmbd * (ddetF_dF[0] * ddetF_dF[0]) + scale_miu;
@@ -798,7 +798,7 @@ static void accumulateMaterialForceAndHessian_NeoHookean(
     d2E_dF_dF[8][7] = scale_lmbd * (ddetF_dF[7] * ddetF_dF[8]);
     d2E_dF_dF[7][8] = d2E_dF_dF[8][7];
 
-    fpreal9 dE_dF;
+    _fpreal9 dE_dF;
     for (int row = 0; row < 3; ++row)
     {
         for (int col = 0; col < 3; ++col)
@@ -843,7 +843,7 @@ static void accumulateMaterialForceAndHessian_NeoHookean(
 
 #if has_otis
     // Use the hessian approximation from Otis, I can't be bothered rewriting this
-    projectToSPD(d2E_dxi_dxi);
+    projectToSPD(d2E_dxi_dxi, 0);
 #else
     // Use the hessian approximation from AVBD, less stable
     spdApproximation(d2E_dxi_dxi);
