@@ -20,8 +20,11 @@ As well as the OpenCL version, there's an old VEX version to show how it works. 
 
 Thanks to Anka He Chen and Chris Giles for making these open source with permissive licenses!
 
-| [Download the HIP file!](../../releases/latest) |
-| --- |
+<table>
+  <tr>
+    <th><a href="../../releases/latest">Download the HIP file!</a></th>
+  </tr>
+</table>
 
 > [!CAUTION]
 > Self and external collisions are not implemented correctly yet, and are [very buggy](#why-are-collisions-so-bad).
@@ -401,8 +404,12 @@ v@inertia = v@P + v@v * f@TimeInc;
 v@P = v@inertia;
 ```
 
-| [OpenCL version](./ocl/forwardStep.cl) | [VEX version (outdated)](./vex/forwardStep.c) |
-| --- | --- |
+<table>
+  <tr>
+    <th><a href="./ocl/forwardStep.cl">OpenCL version</a></th>
+    <th><a href="./vex/forwardStep.c">VEX version (outdated)</a></th>
+  </tr>
+</table>
 
 ### 2. Update the dual variables (AVBD)
 
@@ -419,8 +426,12 @@ AVBD adjusts the stiffness based on `lambda` and `penalty`. They get dampened by
 @penalty = min(@penalty, f@stiffness);
 ```
 
-| [OpenCL version](./ocl/forwardStepDual.cl) | [Python version](https://github.com/savant117/avbd-demo2d/blob/main/source/solver.cpp#L105) |
-| --- | --- |
+<table>
+  <tr>
+    <th><a href="./ocl/forwardStepDual.cl">OpenCL version</a></th>
+    <th><a href="https://github.com/savant117/avbd-demo2d/blob/main/source/solver.cpp#L105">Python version</a></th>
+  </tr>
+</table>
 
 ### 3. Apply the constraints
 
@@ -453,8 +464,12 @@ accumulateCollisionForceAndHessian(force, hessian); // Contributions due to coll
 v@P += force * invert(hessian); // Reduce the variational energy of the system
 ```
 
-| [OpenCL version](./ocl/solveConstraints.cl) | [VEX version (outdated)](./vex/solveConstraints.c) |
-| --- | --- |
+<table>
+  <tr>
+    <th><a href="./ocl/solveConstraints.cl">OpenCL version</a></th>
+    <th><a href="./vex/solveConstraints.c">VEX version (outdated)</a></th>
+  </tr>
+</table>
 
 ### 4. Dual update (AVBD)
 
@@ -473,8 +488,12 @@ if (lambdaTmp > fmin[i] && lambdaTmp < fmax[i]) {
 }
 ```
 
-| [OpenCL version](https://github.com/search?q=repo%3AMysteryPancake%2FHoudini-VBD%20dualUpdate&type=code) | [Python version](https://github.com/savant117/avbd-demo2d/blob/main/source/solver.cpp#L205) |
-| --- | --- |
+<table>
+  <tr>
+    <th><a href="https://github.com/search?q=repo%3AMysteryPancake%2FHoudini-VBD%20dualUpdate&type=code">OpenCL version</a></th>
+    <th><a href="https://github.com/savant117/avbd-demo2d/blob/main/source/solver.cpp#L205">Python version</a></th>
+  </tr>
+</table>
 
 ### 5. Update the velocities
 
@@ -485,5 +504,9 @@ Update the velocities based on the change in position (same as Vellum).
 v@v = (v@P - v@pprevious) / f@TimeInc;
 ```
 
-| [OpenCL version](./ocl/updateVelocity.cl) | [VEX version (outdated)](./vex/updateVelocity.c) |
-| --- | --- |
+<table>
+  <tr>
+    <th><a href="./ocl/updateVelocity.cl">OpenCL version</a></th>
+    <th><a href="./vex/updateVelocity.c">VEX version (outdated)</a></th>
+  </tr>
+</table>
